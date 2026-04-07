@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk
+import customtkinter as ctk
 import random
 import ctypes
 import os
@@ -7,28 +7,29 @@ import sys
 import keyboard
 
 # ==========================================
-# FIX ANTI-CRASH POUR LE MODE --NOCONSOLE
+# FIX ANTI-CRASH POUR LE MODE EXE
 # ==========================================
-# Windows supprime la console en mode .exe. Si on fait un print(), 
-# le programme crashe. Ce code envoie les prints dans le vide.
 class NullWriter:
     def write(self, text): pass
     def flush(self): pass
 
 if sys.stdout is None: sys.stdout = NullWriter()
 if sys.stderr is None: sys.stderr = NullWriter()
-# ==========================================
+
+# Configuration globale du design
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("dark-blue")
 
 class ValorantChaosOverlay:
     def __init__(self, root):
         self.root = root
         self.root.title("Chaos Overlay - Core")
         
-        # --- CONFIGURATION DYNAMIQUE ---
-        self.timer_interval = tk.IntVar(value=60) # Secondes
+        # --- CONFIGURATION ---
+        self.timer_interval = tk.IntVar(value=60) # Secondes par défaut
         self.gif_filename = "dance.gif"
         
-        # États des malus modifiables dans l'admin
+        # États des malus
         self.malus_states = {
             "flashbang": tk.BooleanVar(value=True),
             "tunnel_vision": tk.BooleanVar(value=True),
@@ -36,22 +37,140 @@ class ValorantChaosOverlay:
             "fake_crosshair": tk.BooleanVar(value=True),
             "scanlines": tk.BooleanVar(value=True),
             "gif_dance": tk.BooleanVar(value=True),
-            "fake_crash": tk.BooleanVar(value=True)
+            "fake_crash": tk.BooleanVar(value=True),
+            "blind_spot": tk.BooleanVar(value=True),
+            "paranoia": tk.BooleanVar(value=True),
+            "screen_crack": tk.BooleanVar(value=True),
+            "mosquito": tk.BooleanVar(value=True)
         }
         
-        # Initialisation
-        self.setup_overlay_window()
-        self.load_gif_frames()
-        
-        # Raccourci clavier global pour ouvrir le menu Admin
-        # Utilisation de root.after pour rester "Thread-Safe" avec Tkinter
+        # Raccourci clavier de secours
         keyboard.add_hotkey('home', lambda: self.root.after(0, self.open_admin_panel))
         
         self.timer_id = None
-        self.start_timer()
+        self.admin_window = None
+        
+        # Initialisation du noyau
+        self.setup_overlay_window()
+        self.load_gif_frames()
+        
+        # Au lieu de démarrer le timer direct, on lance l'écran de chargement !
+        self.show_splash_screen()
 
     # ==========================================
-    # NOYAU & SYSTÈME
+    # 1. ÉCRAN DE CHARGEMENT (SPLASH SCREEN)
+    # ==========================================
+    def show_splash_screen(self):
+        self.splash = ctk.CTkToplevel(self.root)
+        self.splash.overrideredirect(True) # Enlève la bordure Windows
+        self.splash.attributes("-topmost", True)
+        self.splash.configure(fg_color="#0f1923") # Couleur de fond Valorant
+        
+        # Centrer le splash screen
+        splash_width = 500
+        splash_height = 300
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+        x = (screen_width / 2) - (splash_width / 2)
+        y = (screen_height / 2) - (splash_height / 2)
+        self.splash.geometry(f"{splash_width}x{splash_height}+{int(x)}+{int(y)}")
+
+        # Contenu visuel
+        ctk.CTkLabel(self.splash, text="VALORANT", font=("Arial", 40, "bold"), text_color="#ece8e1").pack(pady=(40, 0))
+        ctk.CTkLabel(self.splash, text="CHAOS OVERLAY", font=("Arial", 30, "bold"), text_color="#ff4655").pack(pady=(0, 20))
+        
+        # Le fameux crédit
+        ctk.CTkLabel(self.splash, text="Made by Chupa", font=("Arial", 14, "italic"), text_color="#8b978f").pack()
+
+        # Barre de progression
+        self.progressbar = ctk.CTkProgressBar(self.splash, width=400, height=10, progress_color="#ff4655", fg_color="#1f2326")
+        self.progressbar.pack(pady=40)
+        self.progressbar.set(0)
+
+        # Lancer l'animation
+        self.update_splash_progress(0)
+
+    def update_splash_progress(self, value):
+        if value < 1.0:
+            value += 0.05 # Vitesse de chargement
+            self.progressbar.set(value)
+            # Rappelle la fonction dans 60ms
+            self.root.after(60, lambda: self.update_splash_progress(value))
+        else:
+            # Fin du chargement
+            self.splash.destroy()
+            self.open_admin_panel() # Ouvre l'admin automatiquement !
+
+    # ==========================================
+    # 2. DASHBOARD ADMIN (L'INTERFACE)
+    # ==========================================
+    def open_admin_panel(self):
+        if self.admin_window is not None and self.admin_window.winfo_exists():
+            self.admin_window.focus()
+            return
+
+        self.admin_window = ctk.CTkToplevel(self.root)
+        self.admin_window.title("Dashboard - Made by Chupa")
+        
+        # Centrer l'admin
+        admin_width = 450
+        admin_height = 750
+        x = (self.root.winfo_screenwidth() / 2) - (admin_width / 2)
+        y = (self.root.winfo_screenheight() / 2) - (admin_height / 2)
+        self.admin_window.geometry(f"{admin_width}x{admin_height}+{int(x)}+{int(y)}")
+        
+        self.admin_window.attributes("-topmost", True)
+        self.admin_window.configure(fg_color="#0f1923")
+        
+        # En-tête
+        header = ctk.CTkFrame(self.admin_window, fg_color="#0f1923")
+        header.pack(fill="x", pady=(20, 5))
+        ctk.CTkLabel(header, text="DASHBOARD", font=("Arial", 32, "bold"), text_color="#ece8e1").pack()
+        ctk.CTkLabel(header, text="By Chupa", font=("Arial", 16, "italic"), text_color="#ff4655").pack()
+
+        # Bloc Timer
+        config_frame = ctk.CTkFrame(self.admin_window, fg_color="#1f2326", corner_radius=8)
+        config_frame.pack(fill="x", padx=20, pady=10)
+        ctk.CTkLabel(config_frame, text="Fréquence (secondes) :", font=("Arial", 15)).pack(side="left", padx=15, pady=15)
+        
+        timer_entry = ctk.CTkEntry(config_frame, width=70, font=("Arial", 16, "bold"), border_color="#ff4655")
+        timer_entry.insert(0, str(self.timer_interval.get()))
+        timer_entry.pack(side="right", padx=15, pady=15)
+        
+        # Rendre le timer réactif
+        def update_timer(event):
+            try: self.timer_interval.set(int(timer_entry.get()))
+            except ValueError: pass
+        timer_entry.bind("<KeyRelease>", update_timer)
+
+        # Bloc Checkboxes
+        ctk.CTkLabel(self.admin_window, text="ACTIVATION DES MALUS", font=("Arial", 12, "bold"), text_color="#8b978f").pack(anchor="w", padx=20, pady=(15, 0))
+        
+        scroll = ctk.CTkScrollableFrame(self.admin_window, fg_color="#1f2326", corner_radius=8)
+        scroll.pack(fill="both", expand=True, padx=20, pady=5)
+
+        for malus_name, var in self.malus_states.items():
+            display_name = malus_name.replace("_", " ").upper()
+            cb = ctk.CTkCheckBox(scroll, text=display_name, variable=var, 
+                                 font=("Arial", 13, "bold"), text_color="#ece8e1",
+                                 fg_color="#ff4655", hover_color="#ff6b77", border_color="#535c65")
+            cb.pack(anchor="w", pady=10, padx=10)
+
+        # Bouton Démarrer
+        btn_save = ctk.CTkButton(self.admin_window, text="▶ DÉMARRER LE CHAOS", 
+                                 font=("Arial", 18, "bold"), text_color="#ece8e1",
+                                 fg_color="#ff4655", hover_color="#ff6b77", corner_radius=6, height=55,
+                                 command=self.save_and_restart)
+        btn_save.pack(fill="x", padx=20, pady=20)
+        
+        ctk.CTkLabel(self.admin_window, text="(Appuie sur HOME en jeu pour rouvrir ce menu)", font=("Arial", 11), text_color="#535c65").pack(pady=(0, 10))
+
+    def save_and_restart(self):
+        if self.admin_window: self.admin_window.destroy()
+        self.start_timer() # Démarre la roulette en arrière-plan
+
+    # ==========================================
+    # 3. NOYAU INVISIBLE (CLICK-THROUGH)
     # ==========================================
     def setup_overlay_window(self):
         self.screen_width = self.root.winfo_screenwidth()
@@ -72,143 +191,72 @@ class ValorantChaosOverlay:
 
     def make_click_through(self):
         try:
-            self.root.update_idletasks() # Force la construction visuelle d'abord
+            self.root.update_idletasks()
             hwnd = ctypes.windll.user32.GetParent(self.root.winfo_id())
-            GWL_EXSTYLE = -20
-            WS_EX_LAYERED = 0x00080000
-            WS_EX_TRANSPARENT = 0x00000020
-            WS_EX_NOACTIVATE = 0x08000000 # Empêche de voler le focus de Valorant
-            
-            style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
-            ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, style | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE)
-        except Exception:
-            pass
+            style = ctypes.windll.user32.GetWindowLongW(hwnd, -20)
+            ctypes.windll.user32.SetWindowLongW(hwnd, -20, style | 0x00080000 | 0x00000020 | 0x08000000)
+        except Exception: pass
 
+    # ==========================================
+    # 4. GESTION DU GIF ET DU TIMER
+    # ==========================================
     def get_resource_path(self, filename):
-        """Permet de trouver le GIF même quand il est compilé à l'intérieur de l'EXE."""
-        try:
-            # Si compilé par PyInstaller, le chemin temporaire est dans _MEIPASS
-            base_path = sys._MEIPASS
-        except Exception:
-            # Mode dev (script python normal)
-            base_path = os.path.dirname(os.path.abspath(__file__))
+        try: base_path = sys._MEIPASS
+        except Exception: base_path = os.path.dirname(os.path.abspath(__file__))
         return os.path.join(base_path, filename)
 
     def load_gif_frames(self):
         self.gif_frames = []
         gif_path = self.get_resource_path(self.gif_filename)
-        
-        if not os.path.exists(gif_path):
-            return # On quitte silencieusement si le fichier n'est pas là
-            
+        if not os.path.exists(gif_path): return
         try:
             idx = 0
             while True:
-                frame = tk.PhotoImage(file=gif_path, format=f"gif -index {idx}")
-                self.gif_frames.append(frame)
+                self.gif_frames.append(tk.PhotoImage(file=gif_path, format=f"gif -index {idx}"))
                 idx += 1
-        except tk.TclError:
-            pass
+        except tk.TclError: pass
 
-    # ==========================================
-    # PANNEAU D'ADMINISTRATION
-    # ==========================================
-    def open_admin_panel(self):
-        if hasattr(self, 'admin_window') and self.admin_window.winfo_exists():
-            self.admin_window.focus()
-            return
-
-        self.admin_window = tk.Toplevel(self.root)
-        self.admin_window.title("Admin Panel - Valorant Chaos")
-        self.admin_window.geometry("350x450")
-        self.admin_window.wm_attributes("-topmost", True)
-        self.admin_window.configure(padx=20, pady=20)
-        self.admin_window.attributes('-alpha', 0.95)
-
-        tk.Label(self.admin_window, text="⚙️ Paramètres", font=("Arial", 14, "bold")).pack(pady=(0, 15))
-
-        frame_timer = tk.Frame(self.admin_window)
-        frame_timer.pack(fill="x", pady=5)
-        tk.Label(frame_timer, text="Fréquence (secondes) :").pack(side="left")
-        tk.Entry(frame_timer, textvariable=self.timer_interval, width=5).pack(side="right")
-
-        tk.Label(self.admin_window, text="Malus Actifs :", font=("Arial", 10, "bold")).pack(anchor="w", pady=(15, 5))
-
-        for malus_name, var in self.malus_states.items():
-            ttk.Checkbutton(self.admin_window, text=malus_name.replace("_", " ").title(), variable=var).pack(anchor="w")
-
-        ttk.Button(self.admin_window, text="Sauvegarder & Relancer", command=self.save_and_restart).pack(pady=20, fill="x")
-
-    def save_and_restart(self):
-        self.admin_window.destroy()
-        self.start_timer()
-
-    # ==========================================
-    # LOGIQUE DE LA ROULETTE
-    # ==========================================
     def start_timer(self):
-        if self.timer_id is not None:
-            self.root.after_cancel(self.timer_id)
-        
-        interval_ms = self.timer_interval.get() * 1000
-        self.timer_id = self.root.after(interval_ms, self.trigger_malus)
+        if self.timer_id is not None: self.root.after_cancel(self.timer_id)
+        # La valeur saisie par l'utilisateur est récupérée ici en temps réel
+        self.timer_id = self.root.after(self.timer_interval.get() * 1000, self.trigger_malus)
 
     def trigger_malus(self):
         active_malus = [name for name, var in self.malus_states.items() if var.get()]
-        if not active_malus:
-            active_malus = ["rien"] # Sécurité si l'utilisateur décoche tout
-
-        choix_final = random.choice(active_malus)
-        self.start_roulette_ui(choix_final, active_malus)
+        if not active_malus: active_malus = ["rien"]
+        self.start_roulette_ui(random.choice(active_malus), active_malus)
 
     def start_roulette_ui(self, final_choice, active_malus):
         self.roulette_items = []
-        bg_width, bg_height = 350, 80
-        y_pos = self.screen_height // 3
-        
-        bg = self.canvas.create_rectangle(20, y_pos, 20 + bg_width, y_pos + bg_height, fill="#1a1a1a", outline="#ff4655", width=3)
-        self.roulette_items.append(bg)
-        
-        text_id = self.canvas.create_text(20 + (bg_width // 2), y_pos + (bg_height // 2), text="...", fill="white", font=("Arial", 22, "bold"), justify="center")
+        bg_width, bg_height, y_pos = 350, 80, self.screen_height // 3
+        self.roulette_items.append(self.canvas.create_rectangle(20, y_pos, 20 + bg_width, y_pos + bg_height, fill="#0f1923", outline="#ff4655", width=3))
+        text_id = self.canvas.create_text(20 + (bg_width // 2), y_pos + (bg_height // 2), text="...", fill="#ece8e1", font=("Arial", 22, "bold"), justify="center")
         self.roulette_items.append(text_id)
-        
         self.animate_roulette(30, 50, text_id, final_choice, active_malus)
 
     def animate_roulette(self, spins_left, delay, text_id, final_choice, all_malus):
         if spins_left > 0:
-            random_malus = random.choice(all_malus).replace("_", " ").upper()
-            self.canvas.itemconfig(text_id, text=random_malus, fill="white")
+            self.canvas.itemconfig(text_id, text=random.choice(all_malus).replace("_", " ").upper(), fill="#ece8e1")
             new_delay = delay + int(120 / spins_left) 
             self.root.after(new_delay, lambda: self.animate_roulette(spins_left - 1, new_delay, text_id, final_choice, all_malus))
         else:
-            texte_final = final_choice.replace("_", " ").upper()
-            self.canvas.itemconfig(text_id, text=f">> {texte_final} <<", fill="#ff4655")
+            self.canvas.itemconfig(text_id, text=f">> {final_choice.replace('_', ' ').upper()} <<", fill="#ff4655")
             self.root.after(1500, lambda: self.execute_malus(final_choice))
 
     def execute_malus(self, choix):
-        for item in self.roulette_items:
-            self.canvas.delete(item)
-            
-        if choix == "flashbang": self.effect_flashbang()
-        elif choix == "tunnel_vision": self.effect_tunnel_vision()
-        elif choix == "hud_blocker": self.effect_hud_blocker()
-        elif choix == "fake_crosshair": self.effect_fake_crosshair()
-        elif choix == "scanlines": self.effect_scanlines()
-        elif choix == "gif_dance": self.effect_gif_dance()
-        elif choix == "fake_crash": self.effect_fake_crash()
-            
+        for item in self.roulette_items: self.canvas.delete(item)
+        getattr(self, f"effect_{choix}", lambda: None)()
         self.start_timer()
 
     # ==========================================
-    # EFFETS VISUELS
+    # 5. EFFETS VISUELS
     # ==========================================
     def effect_flashbang(self):
         flash = self.canvas.create_rectangle(0, 0, self.screen_width, self.screen_height, fill="white", outline="")
         self.root.after(2500, lambda: self.canvas.delete(flash))
 
     def effect_tunnel_vision(self):
-        cx, cy = self.screen_width // 2, self.screen_height // 2
-        r = 300 
+        cx, cy, r = self.screen_width // 2, self.screen_height // 2, 300 
         rects = [
             self.canvas.create_rectangle(0, 0, self.screen_width, cy - r, fill="black", outline=""),
             self.canvas.create_rectangle(0, cy + r, self.screen_width, self.screen_height, fill="black", outline=""),
@@ -226,8 +274,7 @@ class ValorantChaosOverlay:
         self.root.after(12000, lambda: [self.canvas.delete(rect) for rect in rects])
 
     def effect_fake_crosshair(self):
-        fx, fy = (self.screen_width // 2) + 45, (self.screen_height // 2) - 40
-        size, thick = 150, 8
+        fx, fy, size, thick = (self.screen_width // 2) + 45, (self.screen_height // 2) - 40, 150, 8
         lines = [
             self.canvas.create_rectangle(fx - size, fy - thick//2, fx + size, fy + thick//2, fill="#00ff00", outline=""),
             self.canvas.create_rectangle(fx - thick//2, fy - size, fx + thick//2, fy + size, fill="#00ff00", outline="")
@@ -235,28 +282,61 @@ class ValorantChaosOverlay:
         self.root.after(10000, lambda: [self.canvas.delete(l) for l in lines])
 
     def effect_scanlines(self):
-        lines = []
-        for y in range(0, self.screen_height, 8):
-            lines.append(self.canvas.create_rectangle(0, y, self.screen_width, y + 4, fill="black", outline=""))
+        lines = [self.canvas.create_rectangle(0, y, self.screen_width, y + 4, fill="black", outline="") for y in range(0, self.screen_height, 8)]
         self.root.after(10000, lambda: [self.canvas.delete(l) for l in lines])
 
     def effect_fake_crash(self):
         items = [
             self.canvas.create_rectangle(0, 0, self.screen_width, self.screen_height, fill="#003399", outline=""),
-            self.canvas.create_text(self.screen_width // 2, self.screen_height // 2, 
-                                    text="VANGUARD ANTI-CHEAT CRITICAL ERROR\nDisconnecting...", 
-                                    fill="white", font=("Courier", 28, "bold"), justify="center")
+            self.canvas.create_text(self.screen_width // 2, self.screen_height // 2, text="VANGUARD ANTI-CHEAT CRITICAL ERROR\nDisconnecting...", fill="white", font=("Courier", 28, "bold"), justify="center")
         ]
         self.root.after(2500, lambda: [self.canvas.delete(i) for i in items])
 
+    def effect_blind_spot(self):
+        spot = self.canvas.create_oval((self.screen_width//2)-80, (self.screen_height//2)-80, (self.screen_width//2)+80, (self.screen_height//2)+80, fill="black", outline="#ff4655", width=2)
+        self.root.after(8000, lambda: self.canvas.delete(spot))
+
+    def effect_paranoia(self):
+        pings = []
+        for _ in range(4):
+            px, py = (self.screen_width//2) + random.choice([random.randint(-400, -100), random.randint(100, 400)]), (self.screen_height//2) + random.randint(-300, 300)
+            pings.extend([
+                self.canvas.create_polygon(px, py-15, px+15, py, px, py+15, px-15, py, fill="#ff4655", outline="white"),
+                self.canvas.create_text(px, py-30, text="!!!", fill="#ff4655", font=("Arial", 12, "bold"))
+            ])
+        self.root.after(4000, lambda: [self.canvas.delete(p) for p in pings])
+
+    def effect_screen_crack(self):
+        cracks, sx, sy = [], random.randint(300, self.screen_width - 300), random.randint(200, self.screen_height - 200)
+        for _ in range(15):
+            x, y, coords = sx, sy, [sx, sy]
+            for _ in range(random.randint(3, 5)):
+                x += random.randint(-400, 400); y += random.randint(-400, 400)
+                coords.extend([x, y])
+            cracks.append(self.canvas.create_line(*coords, fill="#e0e0e0", width=random.randint(1, 3)))
+        self.root.after(8000, lambda: [self.canvas.delete(c) for c in cracks])
+
+    def effect_mosquito(self):
+        self.mosq_x, self.mosq_y, self.mosq_dx, self.mosq_dy, self.mosq_active = self.screen_width//2, self.screen_height//2, 25, 25, True
+        self.mosq_obj = self.canvas.create_rectangle(self.mosq_x, self.mosq_y, self.mosq_x+15, self.mosq_y+15, fill="black", outline="")
+        self.animate_mosquito()
+        self.root.after(10000, self.stop_mosquito)
+
+    def animate_mosquito(self):
+        if hasattr(self, 'mosq_active') and self.mosq_active:
+            self.mosq_x += self.mosq_dx; self.mosq_y += self.mosq_dy
+            if self.mosq_x <= 0 or self.mosq_x >= self.screen_width - 15: self.mosq_dx *= -1
+            if self.mosq_y <= 0 or self.mosq_y >= self.screen_height - 15: self.mosq_dy *= -1
+            if random.random() < 0.05: self.mosq_dx, self.mosq_dy = random.choice([-30, -15, 15, 30]), random.choice([-30, -15, 15, 30])
+            self.canvas.coords(self.mosq_obj, self.mosq_x, self.mosq_y, self.mosq_x+15, self.mosq_y+15)
+            self.root.after(30, self.animate_mosquito)
+
+    def stop_mosquito(self):
+        self.mosq_active = False
+        if hasattr(self, 'mosq_obj'): self.canvas.delete(self.mosq_obj)
+
     def effect_gif_dance(self):
-        if not self.gif_frames: 
-            # Affiche un texte d'erreur si le GIF n'est pas trouvé
-            error_msg = self.canvas.create_text(self.screen_width // 2, self.screen_height // 2, 
-                                                text="[ERREUR : GIF INTROUVABLE]", fill="red", font=("Arial", 20, "bold"))
-            self.root.after(3000, lambda: self.canvas.delete(error_msg))
-            return
-            
+        if not self.gif_frames: return
         self.is_animating = True
         self.gif_canvas_obj = self.canvas.create_image(self.screen_width // 2, self.screen_height // 2, image=self.gif_frames[0])
         self.animate_gif(0)
@@ -265,18 +345,15 @@ class ValorantChaosOverlay:
     def animate_gif(self, frame_idx):
         if self.is_animating:
             self.canvas.itemconfig(self.gif_canvas_obj, image=self.gif_frames[frame_idx])
-            next_idx = (frame_idx + 1) % len(self.gif_frames)
-            self.root.after(40, lambda: self.animate_gif(next_idx))
+            self.root.after(40, lambda: self.animate_gif((frame_idx + 1) % len(self.gif_frames)))
 
     def stop_gif(self):
         self.is_animating = False
-        if hasattr(self, 'gif_canvas_obj'):
-            self.canvas.delete(self.gif_canvas_obj)
+        if hasattr(self, 'gif_canvas_obj'): self.canvas.delete(self.gif_canvas_obj)
 
 if __name__ == "__main__":
     try:
         root = tk.Tk()
         app = ValorantChaosOverlay(root)
         root.mainloop()
-    except Exception:
-        pass
+    except Exception: pass
