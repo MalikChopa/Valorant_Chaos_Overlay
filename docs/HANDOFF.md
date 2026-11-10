@@ -1,7 +1,7 @@
 # Handoff : Valorant Chaos Overlay (2026-11-10)
 
 Dernière visite : 2026-11-10
-Jalon : J1–J3 faits, testés sur le bureau ; push en attente de Malik
+Jalon : J1–J3 faits, testés sur le bureau, poussés sur GitHub (2026-11-10)
 Fiche : validée le 2026-11-10 · Maquette : interface existante conservée
 
 Ordre de lecture : `CLAUDE.md`, ce fichier, `docs/FICHE.md`.
@@ -24,7 +24,7 @@ Git : a74abcb (avant tout changement). Plafond : 8 Ko.
 - [?] Mémoire du GIF chargé en entier ≈ 560 Mo : estimation, non mesurée.
 - [V 2026-11-10] Fiche validée par Malik, architecture écrite (`docs/ARCHITECTURE.md`), commit d564d74.
 - [V 2026-11-10] Lancé sur le bureau avec l'accord de Malik (`python -m chaos_overlay`, sans le jeu) : fenêtre « Chaos Overlay - Core » qui répond, 51,6 Mo de RAM au démarrage (Get-Process, avant tout tirage du GIF) ; Malik confirme « ça marche ». Processus arrêté ensuite par Diapason. Non mesuré : HOME avec une fenêtre admin au premier plan, RAM après le malus GIF.
-- Installé, acheté, publié : `.venv` du projet (accord de Malik le 2026-11-10) : customtkinter 6.0.0, keyboard 0.13.5, pytest 9.2.0, mypy 2.4.1, pyinstaller 6.22.3 ; 95 Mo mesurés (`du -sh`), annoncés « quelques dizaines ». Rien de publié.
+- Installé, acheté, publié : `.venv` du projet (accord de Malik le 2026-11-10) : customtkinter 6.0.0, keyboard 0.13.5, pytest 9.2.0, mypy 2.4.1, pyinstaller 6.22.3 ; 95 Mo mesurés (`du -sh`), annoncés « quelques dizaines ». Poussé sur origin/main le 2026-11-10 (a74abcb..b893328), avec l accord de Malik.
 
 ## Agents lancés
 | Agent | Tâche | Modèle | Fichier de travail | Statut | Brief | Coût |
@@ -44,7 +44,7 @@ Git : a74abcb (avant tout changement). Plafond : 8 Ko.
 1. J1 à J3 faits et vérifiés (commits locaux). Attendre les réponses de Malik ci-dessous.
 
 ## En attente de Malik
-- Accord pour `git push` sur MalikChopa/Valorant_Chaos_Overlay ; release v2.0.0 éventuelle (publication).
+- Release v2.0.0 éventuelle (publication, à demander). Bouton « Quitter » dans le Dashboard (décision produit).
 - keyboard 0.13.5 reste dans .venv sans être utilisé : le désinstaller ? (petit, local)
 
 ## Coûts mesurés
