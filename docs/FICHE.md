@@ -35,7 +35,7 @@ Une page, écrite à partir de l'existant (mode « Adapter » choisi par Malik l
 | Mode de reprise | Adapter | 2026-11-10 |
 | Améliorations code | Découpage + types + tests, bugs, config fichier, HOME sans admin | 2026-11-10 |
 | Livraison | pyproject + .gitignore, .spec PyInstaller, README + schéma, licence | 2026-11-10 |
-| mlg.gif | Chargement allégé ; garder ou remplacer : à décider (source = site de GIF, lien inconnu) | 2026-11-10 (partiel) |
+| mlg.gif | Gardé, chargement allégé ; README : « trouvé sur un site de GIF, source inconnue, droits non vérifiés » | 2026-11-10 |
 | Licence | MIT | 2026-11-10 |
 | Format de config | JSON (lisible sans dépendance) | 2026-11-10 |
 | Python cible | 3.10+ | 2026-11-10 |
