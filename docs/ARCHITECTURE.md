@@ -16,7 +16,7 @@ chaos_overlay/
   scheduler.py         # logique pure : tirage, séquence de la roulette, validation de fréquence
   config.py            # (J2) dataclass Config, load/save JSON, validation ; pure
   hotkey.py            # (J2) RegisterHotKey dans un thread dédié + file d'attente lue par root.after
-  win32.py             # make_click_through(hwnd) -> bool ; seul fichier qui appelle ctypes.windll
+  win32.py             # make_click_through(hwnd) -> bool ; seul fichier qui appelle ctypes.windll (hotkey.py a sa propre instance WinDLL user32, limitée à RegisterHotKey, UnregisterHotKey, GetMessageW, PostThreadMessageW : écart accepté le 2026-11-10)
   malus/
     __init__.py        # REGISTRY : dict[str, type[Malus]], décorateur @register ; importe tous les malus
     base.py            # Malus (ABC) + EffectContext

@@ -22,6 +22,10 @@ Langue de travail : français, tutoiement, réponses courtes.
 ## Décisions (datées)
 - 2026-11-10 : reprise en mode « Adapter » (utilisateur).
 - 2026-11-10 : améliorations retenues : découpage + types + tests, bugs, config en fichier, HOME sans admin, pyproject + .gitignore, .spec PyInstaller, README + schéma, licence ; mlg.gif gardé avec source citée (utilisateur).
+- 2026-11-10 : mlg.gif gardé, droits non vérifiés (source : site de GIF, lien inconnu), le README le dira (utilisateur).
+- 2026-11-10 : J1 fait (paquet `chaos_overlay/`) ; `valorant_roulette.py` n'est plus qu'un lanceur (délégué).
+- 2026-11-10 : journal dans un fichier `chaos_overlay.log` à côté de l'exe (rotation 256 Ko), car l'exe sans console masquait les avertissements (délégué).
+- 2026-11-10 : bornes de config : fréquence 1 à 3600 s, durées 500 à 60 000 ms ; config `chaos_config.json` à côté de l'exe (délégué).
 
 ## Règles du projet
 - Méthode « Diapason » : la session principale pilote, délègue, vérifie. Un agent = une tâche = ses fichiers ; jamais deux rédacteurs sur les mêmes fichiers.

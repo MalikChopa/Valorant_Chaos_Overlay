@@ -1,5 +1,6 @@
 """Appels Win32 de l'overlay. Seul fichier du projet qui utilise ctypes.windll.
 
+(La touche HOME est dans hotkey.py : sa propre instance user32, RegisterHotKey seulement.)
 Règle du projet : on ne touche qu'aux styles de NOTRE fenêtre (click-through).
 Rien d'autre : pas de lecture d'autres processus, pas d'envoi de touches ni de clics.
 """

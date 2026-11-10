@@ -1,7 +1,7 @@
 # Handoff : Valorant Chaos Overlay (2026-11-10)
 
 Dernière visite : 2026-11-10
-Jalon : J1 (cœur) en cours
+Jalon : J2 (config + HOME) en cours
 Fiche : validée le 2026-11-10 · Maquette : interface existante conservée
 
 Ordre de lecture : `CLAUDE.md`, ce fichier, `docs/FICHE.md`.
@@ -28,7 +28,8 @@ Git : a74abcb (avant tout changement). Plafond : 8 Ko.
 ## Agents lancés
 | Agent | Tâche | Modèle | Fichier de travail | Statut | Brief | Coût |
 |---|---|---|---|---|---|---|
-| exec-J1 | J1 cœur : découpage, types, tests, bugs | opus | docs/JOURNAL.md §J1 | en cours | `docs/briefs/01-executant-J1.md` | non mesuré (fenêtre 5 h à 32 % au lancement) |
+| exec-J1 | J1 cœur : découpage, types, tests, bugs | opus | docs/JOURNAL.md §J1 | terminé (vérifié, commit 732e4f6) | `docs/briefs/01-executant-J1.md` | 98,5 k tokens · 10 min |
+| exec-J2 | J2 config JSON, HOME sans admin, journal fichier | opus | docs/JOURNAL.md §J2 | terminé (vérifié) | `docs/briefs/02-executant-J2.md` | 78 k tokens · 8 min |
 
 ## Pistes échouées et pièges connus (ne jamais couper)
 - Le README parle de `dance.gif` ; le bon fichier est `mlg.gif`.

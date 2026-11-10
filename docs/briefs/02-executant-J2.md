@@ -1,0 +1,29 @@
+Project: Valorant Chaos Overlay — passive desktop overlay for streamers (random visual handicaps over the screen). Folder: C:\Users\Abdel-Malik\Projects\Valorant_Chaos_Overlay (run all commands from this folder). Today's date: 2026-11-10. Language: French (docs/JOURNAL.md and your report; UI strings in French).
+Read first: CLAUDE.md, then docs/ARCHITECTURE.md §3 and §5 "J2", then docs/JOURNAL.md §J1 (what exists, commands). Then the existing code you change: chaos_overlay/app.py, chaos_overlay/ui/dashboard.py, chaos_overlay/paths.py, chaos_overlay/malus/base.py (constructor `duration_ms`). Do not re-read the legacy file.
+Useful user context: Windows 11, Python 3.10.11. Junior developer: readable code, short French docstrings, as in J1.
+You write ONLY: chaos_overlay/config.py (new), chaos_overlay/hotkey.py (new), chaos_overlay/logs.py (new), chaos_overlay/app.py, chaos_overlay/ui/dashboard.py, chaos_overlay/win32.py (only if hotkey constants belong there), tests/ (new test files; existing tests must stay green and unchanged unless a test asserted the `keyboard` lib), docs/JOURNAL.md (section J2 + state table). Do not touch: docs/FICHE.md, docs/ARCHITECTURE.md, docs/HANDOFF.md, CLAUDE.md, README.md, mlg.gif, the malus modules, tests/legacy_reference.py, .venv/ (install or uninstall nothing). In parallel: nobody.
+Progress: section J2 of docs/JOURNAL.md, created early, updated at each sub-step.
+Budget: about 350 k tokens. Reached: write your file and report TERMINÉ AVEC RÉSERVES.
+Project dependencies allowed: those in .venv only. Use `.venv/Scripts/python`.
+Filter your commands' output (grep, tail, head).
+
+Role: developer; Python 3.10 (no 3.11+ syntax), tkinter + customtkinter 6.0.0, ctypes, json, threading, queue, logging. SOLE writer of the files above.
+
+HARD LIMITS: the overlay stays strictly passive. Allowed Win32 calls: the window-style calls already in win32.py, RegisterHotKey, UnregisterHotKey, GetMessageW, PostThreadMessageW (to stop the hotkey thread), GetCurrentThreadId. Forbidden: any keyboard/mouse hook (SetWindowsHookEx), input injection, memory or process access, window detection, screen capture, anything about Vanguard. Do NOT launch the application window. Never launch Valorant. Do not commit.
+
+To deliver (J2):
+1. config.py (pure, no tkinter): dataclass `Config` with `frequency_s: int` (default 60, valid 1..3600), `enabled: dict[str, bool]` (default all True, keys = REGISTRY order), `durations_ms: dict[str, int]` (defaults = each malus `default_duration_ms`, valid 500..60000), `hotkey: str = "home"` (only "home" supported for now; another value → default + warning). `load(path) -> Config`: missing file → defaults (no warning); invalid JSON, wrong types or out-of-range values → that field falls back to its default, warning logged, never a crash; unknown keys ignored; missing malus keys filled with defaults. `save(config, path)`: UTF-8, indent 2, written atomically (temp file in the same folder + os.replace); an OSError is logged and returns False. Path: `app_dir() / "chaos_config.json"`.
+2. app.py: load config at start; the Dashboard's checkboxes and frequency reflect it; on "▶ DÉMARRER LE CHAOS" the config is saved (then the timer starts as today). Each triggered malus receives its configured duration (`malus_class(duration_ms)`). The Dashboard keeps its exact look (no new widget).
+3. hotkey.py: class `HomeHotkey(callback)` with `start() -> bool` and `stop()`. A daemon thread calls `RegisterHotKey(None, id, MOD_NOREPEAT, VK_HOME)` then loops on `GetMessageW`; on WM_HOTKEY it puts a token in a `queue.Queue`. The Tk side polls the queue every 100 ms with `root.after` and calls the callback in the Tk thread (Tk is never touched from the worker thread). `start()` returns False if registration fails (the key is already taken, or not on Windows): warning messagebox with a new text that no longer mentions Administrator, e.g. « La touche HOME est déjà utilisée par un autre programme : le Dashboard ne pourra pas être rouvert en jeu. » `stop()` posts WM_QUIT to the thread and unregisters; called on app exit. Remove every use of the `keyboard` lib from the code.
+4. logs.py: `setup_logging()` → console handler when a real stderr exists + a `RotatingFileHandler` on `app_dir() / "chaos_overlay.log"` (max 256 KB, 2 backups, UTF-8); a failure to open the file never crashes. Called from main() instead of basicConfig. (Reason: the windowed .exe has no console, J1 warnings were invisible.)
+5. Tests: config (round trip, missing file, corrupt JSON, wrong types, out of range, unknown key, missing malus key, atomic save leaves no temp file, save failure returns False), hotkey logic that can run without a real hotkey (queue polling calls the callback once per token; `start()` returns False when RegisterHotKey is replaced by a fake returning 0) — do NOT register a real system hotkey in tests, logs (file handler created in a tmp_path, no crash on unwritable path).
+
+Criteria (to measure):
+- `.venv/Scripts/python -m pytest -q` → all green (J1's 252 + new); summary line in JOURNAL.
+- `.venv/Scripts/python -m mypy --strict --ignore-missing-imports chaos_overlay` → Success.
+- `grep -rn "keyboard" chaos_overlay` → no import of the lib (comments explaining the change are fine).
+- `grep -rnE "SetWindowsHookEx|SendInput|keybd_event|mouse_event|ReadProcessMemory|OpenProcess" chaos_overlay` → empty.
+- Imports of chaos_overlay.app, chaos_overlay.hotkey, chaos_overlay.config without a window.
+- Not measurable here: the hotkey firing for real, behaviour when an elevated window has focus (UIPI). Write "non mesuré".
+
+Final report: 10 lines at most; first line a status: TERMINÉ / TERMINÉ AVEC RÉSERVES / BESOIN DE CONTEXTE / BLOQUÉ. Then result, confidence, what is not verified. Three failures on the same error: stop and report.

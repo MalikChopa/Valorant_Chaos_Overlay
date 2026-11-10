@@ -17,6 +17,7 @@ Lancement de l'application (ouvre l'overlay plein écran : seulement avec l'acco
 | Jalon | État | Vérifié par Diapason |
 |---|---|---|
 | J1 Cœur (découpage, types, tests, bugs) | fait (non lancé sur le bureau) | oui (2026-11-10 : pytest 252 passed, mypy strict OK, imports sans fenêtre, grep API interdites vide) |
+| J2 Config JSON, HOME sans admin, journal | fait (non lancé sur le bureau ; HOME réelle non mesurée) | oui (2026-11-10 : pytest 310 passed, mypy strict OK 28 fichiers, plus de lib keyboard, grep API interdites vide) |
 ## J1 : Cœur
 - Fait :
   - Lecture de CLAUDE.md, ARCHITECTURE.md, valorant_roulette.py (372 lignes, commit a74abcb).
@@ -73,3 +74,36 @@ Lancement de l'application (ouvre l'overlay plein écran : seulement avec l'acco
   - Hérités, non corrigés (hors §4) : le rappel HOME de `keyboard` appelle `root.after` depuis un autre thread (corrigé par la file d'attente du J2) ; `screen_crack` lève `ValueError` si l'écran fait moins de 600×400 px (comme avant ; le minuteur repart grâce au `finally`).
   - Artefact : `.mypy_cache/` créé à la racine par mypy (il contient son propre `.gitignore`) ; `.gitignore` du projet prévu au J3.
   - `docs/FICHE.md` apparaît modifié dans `git status` : pas par moi (je n'y ai pas écrit).
+## J2 : Config + HOME sans admin
+- Fait :
+  - Lecture : CLAUDE.md, ARCHITECTURE.md §3 et §5, JOURNAL §J1, `app.py`, `ui/dashboard.py`, `paths.py`, `malus/base.py`, `win32.py`, tests existants.
+  - `chaos_overlay/config.py` (pur : n'importe pas tkinter au chargement ; le registre des malus est importé seulement à l'appel) : dataclass `Config` (`frequency_s` 60, `enabled` tout à True, `durations_ms` = `default_duration_ms` de chaque malus, `hotkey` "home"), `config_path()` = `app_dir() / "chaos_config.json"`, `load(path)`, `save(config, path) -> bool`, `clamp_frequency()`. Lecture champ par champ : un champ invalide reprend sa valeur par défaut avec un avertissement ; fichier absent : valeurs par défaut sans avertissement ; JSON invalide, UTF-8 invalide ou racine qui n'est pas un objet : tout par défaut + avertissement ; clés inconnues ignorées ; clés de malus manquantes complétées. `true`/`false` ne comptent pas comme des entiers. Écriture : fichier temporaire dans le même dossier, `fsync`, puis `os.replace` ; en cas d'`OSError` : avertissement, temporaire supprimé, `False`.
+  - `chaos_overlay/hotkey.py` : `HomeHotkey(callback, after, user32=None)`, `start() -> bool`, `stop()`, `poll()`. Thread démon : `RegisterHotKey(None, 1, MOD_NOREPEAT, VK_HOME)` puis boucle `GetMessageW` ; WM_HOTKEY (id 1) → jeton dans une `queue.Queue` ; `GetMessageW` = 0 (WM_QUIT) ou -1 (erreur) → sortie de boucle puis `UnregisterHotKey` dans le même thread. Côté Tk : `root.after(100, ...)` vide la file et appelle le callback dans le thread Tk. `stop()` : arrêt de la scrutation, `PostThreadMessageW(WM_QUIT)`, `join(1 s)`.
+  - `chaos_overlay/logs.py` : `setup_logging()` = console si `sys.stderr` existe + `RotatingFileHandler(app_dir() / "chaos_overlay.log", 256 Ko, 2 sauvegardes, UTF-8)` ; échec d'ouverture du fichier : avertissement sur la console, pas de plantage ; rappel sans doublon de handlers.
+  - `chaos_overlay/app.py` : config chargée au démarrage (fréquence et cases du Dashboard), bouton « ▶ DÉMARRER LE CHAOS » → `start_clicked()` = `save_config()` puis `start_timer()` ; chaque malus reçoit `durations_ms[key]` ; `HomeHotkey` remplace `register_home_hotkey` et la lib `keyboard` ; nouvel avertissement « La touche HOME est déjà utilisée par un autre programme : le Dashboard ne pourra pas être rouvert en jeu. » ; `setup_logging()` remplace `basicConfig` ; `app.close()` (arrêt de HOME) dans un `finally` après `mainloop()` ; l'erreur fatale est aussi journalisée avant `crash_log.txt`.
+  - `ui/dashboard.py` : non modifié (il lit déjà `timer_interval` et `malus_states`, que l'app remplit depuis la config ; aucun widget ajouté).
+  - `win32.py` : docstring seule (mention de hotkey.py).
+  - Tests ajoutés : `tests/test_config.py` (37 cas : aller-retour, fichier absent, JSON corrompu, UTF-8 invalide, racine non-objet, mauvais types, bornes, clé inconnue, clé de malus manquante, hotkey, sauvegarde atomique sans temporaire, échec d'écriture, échec de `os.replace`, import sans tkinter), `tests/test_hotkey.py` (10 : faux user32, aucun vrai raccourci système ; `poll()` = un appel par jeton, `start()` False si RegisterHotKey renvoie 0, cycle complet start/WM_HOTKEY/stop, erreur GetMessageW, imports sans fenêtre ni lib `keyboard`), `tests/test_logs.py` (7 : fichier dans tmp_path, chemin inaccessible, sans stderr, sans doublon), `tests/test_app_config.py` (4 : sauvegarde des valeurs du Dashboard, bornage de la fréquence, ordre sauvegarde puis minuteur, durée configurée transmise au malus). Tests J1 inchangés.
+- Critères mesurés :
+  - `.venv/Scripts/python -m pytest -q -p no:cacheprovider` → `310 passed in 2.99s` (252 du J1 + 58). `tests/test_hotkey.py` lancé 5 fois de suite : 5 × `10 passed`.
+  - `.venv/Scripts/python -m mypy --strict --ignore-missing-imports chaos_overlay` → `Success: no issues found in 28 source files`. Sans `--ignore-missing-imports` : 3 erreurs, toutes `import-untyped` sur `customtkinter` (celle de `keyboard` a disparu).
+  - `grep -rn "keyboard" chaos_overlay` → une seule ligne : la docstring de `hotkey.py` (« remplace la lib `keyboard` »), aucun import.
+  - `grep -rnE "SetWindowsHookEx|SendInput|keybd_event|mouse_event|ReadProcessMemory|OpenProcess" chaos_overlay` → vide.
+  - `.venv/Scripts/python -c "import sys, tkinter, chaos_overlay.app, chaos_overlay.hotkey, chaos_overlay.config; ..."` → code 0, `tkinter._default_root` = None, `keyboard` absent de `sys.modules`.
+  - Aucun `chaos_config.json` ni `chaos_overlay.log` créé à la racine par les tests (vérifié par `ls`).
+- Non mesuré :
+  - HOME qui se déclenche pour de vrai (aucun raccourci système enregistré, application non lancée).
+  - Comportement quand une fenêtre lancée en administrateur a le focus (UIPI) : non mesuré.
+  - Affichage réel des messagebox, du Dashboard rempli par la config, écriture réelle de `chaos_config.json` et `chaos_overlay.log` à côté de l'exe.
+- Écarts au brief et décisions :
+  - Signature `HomeHotkey(callback, after, user32=None)` au lieu de `HomeHotkey(callback)` : `after` (= `root.after`) sert à la scrutation de 100 ms ; `user32` permet le faux objet des tests.
+  - `GetCurrentThreadId` non appelé : `threading.get_native_id()` donne le même identifiant Windows sans charger kernel32.
+  - user32 chargé par `ctypes.WinDLL("user32", use_last_error=True)` dans `hotkey.py` (instance à part, signatures `argtypes`/`restype` posées) : `ctypes.windll` reste dans `win32.py` seul, mais `hotkey.py` est un second fichier qui appelle user32 (écart à ARCHITECTURE §2 « seul fichier qui appelle ctypes.windll » : à trancher par Diapason).
+  - `MOD_NOREPEAT` (comme demandé par le brief ; ARCHITECTURE §5 disait 0) : un appui maintenu ne répète pas l'ouverture.
+  - Fréquence saisie au-dessus de 3600 s : bornée à 3600 au clic « Démarrer » (minuteur et fichier cohérents), info journalisée. Avant, la valeur était prise telle quelle.
+  - `hotkey` accepte « HOME » (majuscules, espaces) comme « home ».
+  - Constantes hotkey gardées dans `hotkey.py` (pas dans `win32.py`).
+  - `app.DEFAULT_FREQUENCY_S` gardé (alias de `config.DEFAULT_FREQUENCY_S`).
+- Bugs connus :
+  - Le bug hérité « callback HOME appelé depuis un autre thread » est corrigé (file + `root.after`).
+  - Si le thread HOME ne répond pas en 2 s au démarrage, `start()` renvoie False et l'avertissement s'affiche alors que la touche pourrait finir par marcher : cas non observé.
