@@ -1,7 +1,7 @@
 # Handoff : Valorant Chaos Overlay (2026-11-10)
 
 Dernière visite : 2026-11-10
-Jalon : J1–J3 faits, en attente de Malik (lancement bureau, push)
+Jalon : J1–J3 faits, testés sur le bureau ; push en attente de Malik
 Fiche : validée le 2026-11-10 · Maquette : interface existante conservée
 
 Ordre de lecture : `CLAUDE.md`, ce fichier, `docs/FICHE.md`.
@@ -23,6 +23,7 @@ Git : a74abcb (avant tout changement). Plafond : 8 Ko.
 - [V 2026-11-10] mlg.gif : GIF89a 640×360, environ 608 images (comptage des blocs de contrôle graphique), 45 Mo.
 - [?] Mémoire du GIF chargé en entier ≈ 560 Mo : estimation, non mesurée.
 - [V 2026-11-10] Fiche validée par Malik, architecture écrite (`docs/ARCHITECTURE.md`), commit d564d74.
+- [V 2026-11-10] Lancé sur le bureau avec l'accord de Malik (`python -m chaos_overlay`, sans le jeu) : fenêtre « Chaos Overlay - Core » qui répond, 51,6 Mo de RAM au démarrage (Get-Process, avant tout tirage du GIF) ; Malik confirme « ça marche ». Processus arrêté ensuite par Diapason. Non mesuré : HOME avec une fenêtre admin au premier plan, RAM après le malus GIF.
 - Installé, acheté, publié : `.venv` du projet (accord de Malik le 2026-11-10) : customtkinter 6.0.0, keyboard 0.13.5, pytest 9.2.0, mypy 2.4.1, pyinstaller 6.22.3 ; 95 Mo mesurés (`du -sh`), annoncés « quelques dizaines ». Rien de publié.
 
 ## Agents lancés
@@ -43,7 +44,6 @@ Git : a74abcb (avant tout changement). Plafond : 8 Ko.
 1. J1 à J3 faits et vérifiés (commits locaux). Attendre les réponses de Malik ci-dessous.
 
 ## En attente de Malik
-- Accord pour lancer l'overlay sur le bureau (`python -m chaos_overlay`) : rendu, click-through, touche HOME, mémoire du GIF. Jamais le jeu.
 - Accord pour `git push` sur MalikChopa/Valorant_Chaos_Overlay ; release v2.0.0 éventuelle (publication).
 - keyboard 0.13.5 reste dans .venv sans être utilisé : le désinstaller ? (petit, local)
 

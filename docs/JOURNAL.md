@@ -16,8 +16,8 @@ Lancement de l'application (ouvre l'overlay plein écran : seulement avec l'acco
 ## État
 | Jalon | État | Vérifié par Diapason |
 |---|---|---|
-| J1 Cœur (découpage, types, tests, bugs) | fait (non lancé sur le bureau) | oui (2026-11-10 : pytest 252 passed, mypy strict OK, imports sans fenêtre, grep API interdites vide) |
-| J2 Config JSON, HOME sans admin, journal | fait (non lancé sur le bureau ; HOME réelle non mesurée) | oui (2026-11-10 : pytest 310 passed, mypy strict OK 28 fichiers, plus de lib keyboard, grep API interdites vide) |
+| J1 Cœur (découpage, types, tests, bugs) | fait (lancé sur le bureau le 2026-11-10, validé par Malik) | oui (2026-11-10 : pytest 252 passed, mypy strict OK, imports sans fenêtre, grep API interdites vide) |
+| J2 Config JSON, HOME sans admin, journal | fait (lancé sur le bureau le 2026-11-10 ; HOME avec fenêtre admin non mesurée) | oui (2026-11-10 : pytest 310 passed, mypy strict OK 28 fichiers, plus de lib keyboard, grep API interdites vide) |
 | J3 Packaging, .spec, README, licence | fait (exe construit, non lancé) | oui (2026-11-10 : pytest 310, mypy OK, mlg.gif présent dans l exe, README relu : 2 corrections faites) |
 ## J1 : Cœur
 - Fait :
