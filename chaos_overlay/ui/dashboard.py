@@ -1,4 +1,4 @@
-"""Dashboard CustomTkinter : fréquence, cases des malus, bouton « Démarrer le chaos »."""
+"""Dashboard CustomTkinter : fréquence, cases des malus, boutons « Démarrer le chaos » et « Quitter »."""
 
 from __future__ import annotations
 
@@ -23,11 +23,13 @@ class Dashboard:
         timer_interval: tk.IntVar,
         malus_states: dict[str, tk.BooleanVar],
         on_start: Callable[[], None],
+        on_quit: Callable[[], None],
     ) -> None:
         self.root = root
         self.timer_interval = timer_interval
         self.malus_states = malus_states
         self.on_start = on_start
+        self.on_quit = on_quit
         self.window: Any = None  # ctk.CTkToplevel quand le panneau est ouvert
 
     def open(self) -> None:
@@ -96,7 +98,19 @@ class Dashboard:
             corner_radius=6,
             height=55,
             command=self._start_clicked,
-        ).pack(fill="x", padx=20, pady=20)
+        ).pack(fill="x", padx=20, pady=(20, 8))
+
+        ctk.CTkButton(
+            window,
+            text="✕ QUITTER",
+            font=(font, 14, "bold"),
+            text_color=theme.MUTED,
+            fg_color=theme.PANEL,
+            hover_color=theme.DIM,
+            corner_radius=6,
+            height=36,
+            command=self.on_quit,
+        ).pack(fill="x", padx=20, pady=(0, 12))
 
         ctk.CTkLabel(
             window, text="(Appuie sur HOME en jeu pour rouvrir ce menu)", font=(font, 11), text_color=theme.DIM

@@ -125,3 +125,8 @@ Lancement de l'application (ouvre l'overlay plein écran : seulement avec l'acco
   - `keyboard==0.13.5` est encore installé dans `.venv` mais n'est plus une dépendance (plus utilisé depuis J2).
   - `addopts = "-p no:cacheprovider"` ajouté pour ne pas créer `.pytest_cache`.
   - `pillow` non déclaré : aucun import PIL dans le code.
+
+## Après J3 : bouton Quitter (fait par Diapason, 2026-11-10)
+- Fait : bouton « ✕ QUITTER » sous « Démarrer » (style discret, couleurs du thème) ; `ChaosApp.quit_clicked` annule le minuteur puis `root.quit()` ; `main()` appelle ensuite `close()`, qui libère HOME.
+- Critères mesurés : pytest 312 passed (2 tests ajoutés) ; mypy OK sur 28 fichiers ; essai réel sur le bureau (script dans le scratchpad, clic simulé à 4 s) : boucle Tk sortie après 4,0 s, HOME inactive, seul MainThread restant.
+- Non mesuré : clic à la souris par un humain (même code appelé).

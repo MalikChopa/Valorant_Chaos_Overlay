@@ -82,3 +82,23 @@ def test_execute_malus_uses_configured_duration(monkeypatch: pytest.MonkeyPatch)
     app.ChaosApp.execute_malus(fake, "rien")  # type: ignore[arg-type]
     assert received == [4321]
     assert timer_calls == [1, 1]
+
+
+def test_quit_clicked_cancels_timer_then_quits_mainloop() -> None:
+    calls: list[tuple[str, Any]] = []
+    root = SimpleNamespace(
+        after_cancel=lambda timer_id: calls.append(("cancel", timer_id)),
+        quit=lambda: calls.append(("quit", None)),
+    )
+    fake = SimpleNamespace(root=root, timer_id="after#7")
+    app.ChaosApp.quit_clicked(fake)  # type: ignore[arg-type]
+    assert calls == [("cancel", "after#7"), ("quit", None)]
+    assert fake.timer_id is None
+
+
+def test_quit_clicked_without_timer_only_quits() -> None:
+    calls: list[str] = []
+    root = SimpleNamespace(after_cancel=lambda timer_id: calls.append("cancel"), quit=lambda: calls.append("quit"))
+    fake = SimpleNamespace(root=root, timer_id=None)
+    app.ChaosApp.quit_clicked(fake)  # type: ignore[arg-type]
+    assert calls == ["quit"]

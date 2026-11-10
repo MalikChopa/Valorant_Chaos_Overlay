@@ -40,7 +40,7 @@ Une page, écrite à partir de l'existant (mode « Adapter » choisi par Malik l
 | Format de config | JSON (lisible sans dépendance) | 2026-11-10 |
 | Python cible | 3.10+ | 2026-11-10 |
 
-Changements après validation : aucun
+Changements après validation : 2026-11-10 : bouton « QUITTER » ajouté au Dashboard (il n'existait aucun moyen de quitter), décidé par Malik le 2026-11-10 (« Les deux »), en même temps que la release v2.0.0.
 
 ## 5. Suite
 - Prochaine étape et coût : architecture courte écrite par moi, puis 3 jalons (J1 découpage + types + tests + bugs ; J2 config + raccourci HOME ; J3 pyproject, .spec, README, licence). Un agent exécutant par jalon, en séquence. Coût : non mesuré, ordre de grandeur quelques % de la fenêtre 5 h (repère du profil : 6 agents sonnet ≈ 4 %).

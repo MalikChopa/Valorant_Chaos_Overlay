@@ -57,7 +57,9 @@ class ChaosApp:
         self.malus_states = {key: tk.BooleanVar(value=self.config.enabled[key]) for key in REGISTRY}
         self.timer_id: str | None = None
 
-        self.dashboard = Dashboard(root, self.timer_interval, self.malus_states, on_start=self.start_clicked)
+        self.dashboard = Dashboard(
+            root, self.timer_interval, self.malus_states, on_start=self.start_clicked, on_quit=self.quit_clicked
+        )
         # Ordre conservé : HOME (et son avertissement) avant l'overlay.
         self.hotkey = HomeHotkey(self.dashboard.open, root.after)
         if not self.hotkey.start():
@@ -74,6 +76,17 @@ class ChaosApp:
         """Bouton « Démarrer le chaos » : enregistre les réglages, puis (re)lance le minuteur."""
         self.save_config()
         self.start_timer()
+
+    def quit_clicked(self) -> None:
+        """Bouton « Quitter » : arrête le minuteur et sort de la boucle Tk.
+
+        main() appelle ensuite close(), qui libère la touche HOME. Les réglages ne sont pas
+        enregistrés : seul « Démarrer » les enregistre, comme avant.
+        """
+        if self.timer_id:
+            self.root.after_cancel(self.timer_id)
+            self.timer_id = None
+        self.root.quit()
 
     def save_config(self) -> bool:
         """Recopie la fréquence et les cases du Dashboard dans la config, puis l'écrit sur disque."""

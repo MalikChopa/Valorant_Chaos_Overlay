@@ -1,7 +1,7 @@
 # Handoff : Valorant Chaos Overlay (2026-11-10)
 
 Dernière visite : 2026-11-10
-Jalon : J1–J3 faits, testés sur le bureau, poussés sur GitHub (2026-11-10)
+Jalon : v2.0.0 publiée (bouton Quitter inclus), 2026-11-10
 Fiche : validée le 2026-11-10 · Maquette : interface existante conservée
 
 Ordre de lecture : `CLAUDE.md`, ce fichier, `docs/FICHE.md`.
@@ -24,6 +24,7 @@ Git : a74abcb (avant tout changement). Plafond : 8 Ko.
 - [?] Mémoire du GIF chargé en entier ≈ 560 Mo : estimation, non mesurée.
 - [V 2026-11-10] Fiche validée par Malik, architecture écrite (`docs/ARCHITECTURE.md`), commit d564d74.
 - [V 2026-11-10] Lancé sur le bureau avec l'accord de Malik (`python -m chaos_overlay`, sans le jeu) : fenêtre « Chaos Overlay - Core » qui répond, 51,6 Mo de RAM au démarrage (Get-Process, avant tout tirage du GIF) ; Malik confirme « ça marche ». Processus arrêté ensuite par Diapason. Non mesuré : HOME avec une fenêtre admin au premier plan, RAM après le malus GIF.
+- [V 2026-11-10] Bouton Quitter : pytest 312 passed, essai réel (sortie en 4,0 s, HOME libérée). Exe reconstruit (56 280 908 octets, sha256 3db88059…), lancé 6 s sur le bureau : fenêtre « Chaos Overlay - Core », 50,8 Mo, puis fermé. Piège : l'exe onefile crée un 2e processus, fermer les deux.
 - Installé, acheté, publié : `.venv` du projet (accord de Malik le 2026-11-10) : customtkinter 6.0.0, keyboard 0.13.5, pytest 9.2.0, mypy 2.4.1, pyinstaller 6.22.3 ; 95 Mo mesurés (`du -sh`), annoncés « quelques dizaines ». Poussé sur origin/main le 2026-11-10 (a74abcb..b893328), avec l accord de Malik.
 
 ## Agents lancés
@@ -34,6 +35,7 @@ Git : a74abcb (avant tout changement). Plafond : 8 Ko.
 | exec-J3 | J3 pyproject, .gitignore, .spec, licence, README | sonnet | docs/JOURNAL.md §J3 | terminé (vérifié) | `docs/briefs/03-executant-J3.md` | 33 k tokens · 1,5 min |
 
 ## Pistes échouées et pièges connus (ne jamais couper)
+- L'exe onefile lance un processus enfant : arrêter le parent ne ferme pas la fenêtre.
 - Le README parle de `dance.gif` ; le bon fichier est `mlg.gif`.
 
 ## Décisions et pistes abandonnées
@@ -44,7 +46,6 @@ Git : a74abcb (avant tout changement). Plafond : 8 Ko.
 1. J1 à J3 faits et vérifiés (commits locaux). Attendre les réponses de Malik ci-dessous.
 
 ## En attente de Malik
-- Release v2.0.0 éventuelle (publication, à demander). Bouton « Quitter » dans le Dashboard (décision produit).
 - keyboard 0.13.5 reste dans .venv sans être utilisé : le désinstaller ? (petit, local)
 
 ## Coûts mesurés

@@ -12,6 +12,7 @@ Un overlay pour streamers : des malus visuels aléatoires (flash blanc, vision e
 **Ce qu'il fait**
 - Il dessine des formes sur une fenêtre plein écran transparente, **transparente aux clics** (styles de fenêtre Win32) : la souris et le clavier passent au travers.
 - La touche **HOME** rouvre le Dashboard. Elle utilise `RegisterHotKey`, le raccourci global standard de Windows : le **mode administrateur n'est plus nécessaire**. Si HOME est déjà prise par un autre programme, l'application l'indique au démarrage.
+- Le bouton **QUITTER** du Dashboard ferme l'application et libère la touche HOME.
 
 **Ce qu'il ne fait pas**
 - Aucune lecture de la mémoire d'un processus, aucune injection, aucune macro, aucune capture d'écran, aucune interaction avec le jeu ou avec Vanguard.
@@ -74,7 +75,7 @@ Pour jouer avec l'overlay, réglez Valorant en **plein écran fenêtré** (borde
 
 ## Releases
 
-Les releases v1.0.0 et v1.1.0 ont été construites avec l'ancienne version (un seul fichier). Aucune release de la version 2.0.0 n'est publiée pour l'instant.
+Téléchargez `valorant_roulette.exe` dans la release **v2.0.0** (onglet Releases), puis lancez-le : pas besoin du mode administrateur. Les releases v1.0.0 et v1.1.0 viennent de l'ancienne version (un seul fichier).
 
 ## Architecture
 
