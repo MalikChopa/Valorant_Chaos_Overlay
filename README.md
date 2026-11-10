@@ -1,49 +1,110 @@
-# 🎯 Valorant Chaos Overlay
+# Valorant Chaos Overlay
 
-![Python](https://img.shields.io/badge/Python-3.13-blue?style=for-the-badge&logo=python)
+![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python)
 ![Windows](https://img.shields.io/badge/OS-Windows-blue?style=for-the-badge&logo=windows)
-![Vanguard](https://img.shields.io/badge/Vanguard-Safe-success?style=for-the-badge&logo=riotgames)
+![Licence MIT](https://img.shields.io/badge/Licence-MIT-green?style=for-the-badge)
+![Passif](https://img.shields.io/badge/Overlay-passif-informational?style=for-the-badge)
 
-**Valorant Chaos Overlay** est un outil conçu pour les streamers et les joueurs cherchant un défi extrême. Il génère aléatoirement des obstructions visuelles sévères (Flashbang, Tunnel Vision, Faux Pings...) en plein match, sans jamais interagir avec la mémoire du jeu.
+Un overlay pour streamers : des malus visuels aléatoires (flash blanc, vision en tunnel, faux écran bleu...) dessinés par-dessus l'écran.
 
-## ✨ Fonctionnalités
+## Ce que fait l'overlay / ce qu'il ne fait pas
 
-- **100% Vanguard Safe** : Le programme est un overlay passif (Click-Through absolu via l'API Win32). Il n'injecte aucun code, n'utilise pas de macros clavier, et ne modifie pas les fichiers du jeu.
-- **Dashboard UI Moderne** : Interface d'administration construite avec `CustomTkinter` (Dark Mode, Thème Valorant) pour configurer les malus en temps réel.
-- **Roulette Dynamique** : Animation textuelle de type "Slot Machine" in-game avant que la sentence ne tombe.
-- **Système Modulaire** : Architecture orientée objet permettant d'ajouter facilement de nouveaux effets en quelques lignes de code.
+**Ce qu'il fait**
+- Il dessine des formes sur une fenêtre plein écran transparente, **transparente aux clics** (styles de fenêtre Win32) : la souris et le clavier passent au travers.
+- La touche **HOME** rouvre le Dashboard. Elle utilise `RegisterHotKey`, le raccourci global standard de Windows : le **mode administrateur n'est plus nécessaire**. Si HOME est déjà prise par un autre programme, l'application l'indique au démarrage.
 
-## 🛠️ Les Malus Actuels
+**Ce qu'il ne fait pas**
+- Aucune lecture de la mémoire d'un processus, aucune injection, aucune macro, aucune capture d'écran, aucune interaction avec le jeu ou avec Vanguard.
 
-| Malus | Description de l'effet |
+Riot ne donne aucune garantie sur ce type d'outil : celui-ci ne fait que dessiner sur l'écran, mais son usage reste à vos risques.
+
+## Les malus
+
+Ordre du registre (celui du Dashboard). Durées par défaut, modifiables dans la configuration.
+
+| Clé | Effet | Durée par défaut |
+| :--- | :--- | :--- |
+| `flashbang` | Écran blanc | 2,5 s |
+| `tunnel_vision` | Tout est noir sauf un carré de 600 px au centre | 8 s |
+| `hud_blocker` | Trois rectangles noirs sur des zones du HUD (haut gauche, bas droite, bas) | 12 s |
+| `fake_crosshair` | Une grande croix verte décalée du centre | 10 s |
+| `scanlines` | Une bande noire de 4 px toutes les 8 px sur tout l'écran | 10 s |
+| `mlg_fullscreen` | Joue `mlg.gif` au centre de l'écran | 6 s |
+| `fake_crash` | Faux écran bleu « VANGUARD ANTI-CHEAT CRITICAL ERROR » (un simple dessin : le programme ne communique pas avec Vanguard) | 2,5 s |
+| `blind_spot` | Un disque noir de 160 px au centre | 8 s |
+| `paranoia` | Quatre faux pings d'ennemi autour du centre | 4 s |
+| `screen_crack` | 15 fissures grises qui partent d'un point tiré au hasard | 8 s |
+| `mosquito` | Un carré noir de 15 px qui rebondit sur les bords de l'écran | 10 s |
+
+## Configuration
+
+Le fichier `chaos_config.json` est lu et écrit à côté de l'exe (ou à la racine du projet en version script). Il est enregistré quand vous cliquez sur « DÉMARRER LE CHAOS ». S'il est absent, les valeurs par défaut sont utilisées.
+
+| Champ | Contenu | Défaut | Bornes |
+| :--- | :--- | :--- | :--- |
+| `frequency_s` | secondes entre deux malus | 60 | 1 à 3600 |
+| `enabled` | `{clé: true/false}` par malus | tout activé | |
+| `durations_ms` | `{clé: durée en ms}` par malus | durées du tableau | 500 à 60000 |
+| `hotkey` | touche du Dashboard | `"home"` | seule `"home"` est prise en charge |
+
+Un champ invalide reprend sa valeur par défaut (avertissement dans le journal) ; un fichier illisible ou un JSON invalide : tout revient aux valeurs par défaut. Les clés inconnues sont ignorées.
+
+Le journal est écrit dans `chaos_overlay.log` à côté de l'exe (rotation à 256 Ko, 2 sauvegardes). Une erreur fatale écrit aussi `crash_log.txt`.
+
+## Installation depuis les sources
+
+Prérequis : Windows, Python 3.10 ou plus.
+
+```bat
+git clone https://github.com/MalikChopa/Valorant_Chaos_Overlay.git
+cd Valorant_Chaos_Overlay
+py -3.10 -m venv .venv
+.venv\Scripts\activate
+pip install -e .[dev]
+```
+
+| Action | Commande |
 | :--- | :--- |
-| 💥 **Flashbang** | Écran intégralement blanc pendant 2.5 secondes. |
-| 🕳️ **Tunnel Vision** | Réduit le champ de vision à un simple cercle central (8s). |
-| 🗺️ **HUD Blocker** | Masque stratégiquement la minimap et les munitions (12s). |
-| 🎯 **Fake Crosshair** | Affiche un faux viseur vert géant légèrement décalé du centre (10s). |
-| ⚠️ **Paranoia** | Fait apparaître de faux pings de danger autour du viseur. |
-| 🪟 **Screen Crack** | Simule une fracture de l'écran obstruant la visibilité. |
-| 🦟 **Mosquito** | Un pixel mort géant rebondit de façon erratique sur l'écran. |
-| 💻 **Fake Crash** | Faux écran bleu fatal (Vanguard Disconnected) pour provoquer la panique. |
-| 💃 **Dance GIF** | Distraction visuelle lourde au centre de l'écran. |
+| Lancer l'application | `python -m chaos_overlay` |
+| Tests | `pytest` |
+| Vérification des types | `mypy` |
+| Construire l'exe | `pyinstaller chaos_overlay.spec` (résultat : `dist\valorant_roulette.exe`, `mlg.gif` embarqué) |
 
-## 🚀 Installation & Exécution
+Pour jouer avec l'overlay, réglez Valorant en **plein écran fenêtré** (borderless) : un overlay ne s'affiche pas au-dessus d'un plein écran exclusif (comportement général de Windows ; non vérifié avec cette version).
 
-### Option 1 : Télécharger l'exécutable (Recommandé)
-1. Allez dans l'onglet **Releases** et téléchargez `valorant_roulette.exe`.
-2. Lancez Valorant et réglez le mode d'affichage sur **Plein Écran Fenêtré (Borderless Windowed)**.
-3. Exécutez le `.exe` en **mode Administrateur** (Requis pour l'écoute globale du clavier).
-4. Appuyez sur la touche `Home` (`Origine`) en jeu pour ouvrir le Dashboard et configurer votre partie.
+## Releases
 
-### Option 2 : Compiler depuis la source
-Prérequis : Python 3.10+
-```bash
-# 1. Cloner le repository
-git clone [https://github.com/VOTRE_NOM/valorant_chaos_overlay.git](https://github.com/VOTRE_NOM/valorant_chaos_overlay.git)
-cd valorant_chaos_overlay
+Les releases v1.0.0 et v1.1.0 ont été construites avec l'ancienne version (un seul fichier). Aucune release de la version 2.0.0 n'est publiée pour l'instant.
 
-# 2. Installer les dépendances
-pip install customtkinter keyboard pyinstaller
+## Architecture
 
-# 3. Compiler l'exécutable (intègre l'image dance.gif en mémoire)
-pyinstaller --noconsole --onefile --add-data "dance.gif;." valorant_roulette.py
+```mermaid
+flowchart TD
+    app[app.py] --> dashboard[ui/dashboard]
+    app --> overlay[ui/overlay]
+    app --> roulette[ui/roulette]
+    app --> splash[ui/splash]
+    app --> scheduler[scheduler]
+    app --> config[config]
+    app --> hotkey[hotkey]
+    app --> registry[malus REGISTRY]
+    registry --> malus[11 modules malus/*.py]
+    overlay --> win32[win32 : clics traversants]
+    hotkey --> win32api[user32 : RegisterHotKey]
+    config --> json[(chaos_config.json)]
+```
+
+### Ajouter un malus
+
+1. Créer `chaos_overlay/malus/mon_malus.py` avec une classe qui hérite de `Malus`, décorée par `@register`.
+2. Y définir `key` (identifiant unique), `default_duration_ms` et la méthode `_draw()`. Prendre un malus existant (par exemple `flashbang.py`) comme modèle.
+3. Ajouter `from chaos_overlay.malus import mon_malus` dans `chaos_overlay/malus/__init__.py` : l'ordre des imports est l'ordre d'affichage dans le Dashboard.
+
+## Crédits
+
+- Made by Chupa.
+- `mlg.gif` : trouvé sur un site de GIF, source inconnue, droits non vérifiés. Il n'est **pas couvert par la licence MIT**.
+
+## Licence
+
+MIT (voir `LICENSE`), à l'exception de `mlg.gif`.

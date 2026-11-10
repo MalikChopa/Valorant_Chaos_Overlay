@@ -18,6 +18,7 @@ Lancement de l'application (ouvre l'overlay plein écran : seulement avec l'acco
 |---|---|---|
 | J1 Cœur (découpage, types, tests, bugs) | fait (non lancé sur le bureau) | oui (2026-11-10 : pytest 252 passed, mypy strict OK, imports sans fenêtre, grep API interdites vide) |
 | J2 Config JSON, HOME sans admin, journal | fait (non lancé sur le bureau ; HOME réelle non mesurée) | oui (2026-11-10 : pytest 310 passed, mypy strict OK 28 fichiers, plus de lib keyboard, grep API interdites vide) |
+| J3 Packaging, .spec, README, licence | fait (exe construit, non lancé) | oui (2026-11-10 : pytest 310, mypy OK, mlg.gif présent dans l exe, README relu : 2 corrections faites) |
 ## J1 : Cœur
 - Fait :
   - Lecture de CLAUDE.md, ARCHITECTURE.md, valorant_roulette.py (372 lignes, commit a74abcb).
@@ -107,3 +108,20 @@ Lancement de l'application (ouvre l'overlay plein écran : seulement avec l'acco
 - Bugs connus :
   - Le bug hérité « callback HOME appelé depuis un autre thread » est corrigé (file + `root.after`).
   - Si le thread HOME ne répond pas en 2 s au démarrage, `start()` renvoie False et l'avertissement s'affiche alors que la touche pourrait finir par marcher : cas non observé.
+
+## J3 : Packaging, README, licence
+- Fait :
+  - `pyproject.toml` (setuptools, paquet `chaos_overlay*` seul ; `customtkinter==6.0.0` ; dev : pytest 9.2.0, mypy 2.4.1, pyinstaller 6.22.3 ; gui-script `chaos-overlay` ; pytest `testpaths=["tests"]` + `-p no:cacheprovider` ; mypy `strict`, `files=["chaos_overlay"]`, `ignore_missing_imports` seulement via override sur `customtkinter`). `.gitignore`, `LICENSE` (MIT, MalikChopa), `chaos_overlay.spec` (one-file, sans console, nom `valorant_roulette`, `datas=[("mlg.gif", ".")]`), `README.md` réécrit.
+- Critères mesurés :
+  - `.venv/Scripts/python -m pytest -q` → `310 passed in 3.23s`.
+  - `.venv/Scripts/python -m mypy` (sans argument) → `Success: no issues found in 28 source files`.
+  - `tomli.load(pyproject.toml)` → OK.
+  - `.venv/Scripts/python -m PyInstaller --noconfirm chaos_overlay.spec` → code 0 ; `dist/valorant_roulette.exe` = 56 279 498 octets. `pyi-archive_viewer -l -r` : `mlg.gif` présent à la racine, modules `chaos_overlay.*` présents.
+  - `git status --short` : ni `build/` ni `dist/`.
+  - README : les 11 clés du tableau = `list(REGISTRY)` dans le même ordre (comparaison python : True) ; aucun `dance.gif`, `VOTRE_NOM`, `3.13`.
+- Non mesuré :
+  - L'exe lancé (jamais exécuté) ; `pip install -e .[dev]` et `pyinstaller` depuis le script installé (pas fait : .venv intact) ; rendu GitHub du schéma mermaid ; affirmation README « pas d'overlay au-dessus d'un plein écran exclusif » (signalée non vérifiée dans le README).
+- Écarts :
+  - `keyboard==0.13.5` est encore installé dans `.venv` mais n'est plus une dépendance (plus utilisé depuis J2).
+  - `addopts = "-p no:cacheprovider"` ajouté pour ne pas créer `.pytest_cache`.
+  - `pillow` non déclaré : aucun import PIL dans le code.

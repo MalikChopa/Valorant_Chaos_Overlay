@@ -1,7 +1,7 @@
 # Handoff : Valorant Chaos Overlay (2026-11-10)
 
 Dernière visite : 2026-11-10
-Jalon : J2 (config + HOME) en cours
+Jalon : J1–J3 faits, en attente de Malik (lancement bureau, push)
 Fiche : validée le 2026-11-10 · Maquette : interface existante conservée
 
 Ordre de lecture : `CLAUDE.md`, ce fichier, `docs/FICHE.md`.
@@ -30,6 +30,7 @@ Git : a74abcb (avant tout changement). Plafond : 8 Ko.
 |---|---|---|---|---|---|---|
 | exec-J1 | J1 cœur : découpage, types, tests, bugs | opus | docs/JOURNAL.md §J1 | terminé (vérifié, commit 732e4f6) | `docs/briefs/01-executant-J1.md` | 98,5 k tokens · 10 min |
 | exec-J2 | J2 config JSON, HOME sans admin, journal fichier | opus | docs/JOURNAL.md §J2 | terminé (vérifié) | `docs/briefs/02-executant-J2.md` | 78 k tokens · 8 min |
+| exec-J3 | J3 pyproject, .gitignore, .spec, licence, README | sonnet | docs/JOURNAL.md §J3 | terminé (vérifié) | `docs/briefs/03-executant-J3.md` | 33 k tokens · 1,5 min |
 
 ## Pistes échouées et pièges connus (ne jamais couper)
 - Le README parle de `dance.gif` ; le bon fichier est `mlg.gif`.
@@ -39,11 +40,12 @@ Git : a74abcb (avant tout changement). Plafond : 8 Ko.
 - 2026-11-10 : mlg.gif gardé par Malik, droits non vérifiés ; le README (J3) le dira : « trouvé sur un site de GIF, source inconnue ».
 
 ## Reprise immédiate (dans l'ordre)
-1. Si exec-J1 « en cours » sans rapport : vérifier `docs/JOURNAL.md` §J1 et `git status`, puis relancer avec `briefs/continuation`.
-2. Vérifier J1 soi-même (pytest, mypy, imports), commiter, puis brief J2 (opus).
+1. J1 à J3 faits et vérifiés (commits locaux). Attendre les réponses de Malik ci-dessous.
 
 ## En attente de Malik
-- Accord pour lancer l'overlay sur le bureau (vérification visuelle, test de RegisterHotKey), plus tard.
+- Accord pour lancer l'overlay sur le bureau (`python -m chaos_overlay`) : rendu, click-through, touche HOME, mémoire du GIF. Jamais le jeu.
+- Accord pour `git push` sur MalikChopa/Valorant_Chaos_Overlay ; release v2.0.0 éventuelle (publication).
+- keyboard 0.13.5 reste dans .venv sans être utilisé : le désinstaller ? (petit, local)
 
 ## Coûts mesurés
 - aucun agent lancé.
