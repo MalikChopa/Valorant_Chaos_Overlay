@@ -1,28 +1,32 @@
-"""Fake crash : faux écran bleu d'erreur (simple dessin sur l'overlay, aucun lien avec Vanguard)."""
+"""Fake crash : faux écran bleu d'erreur (un simple dessin : aucun lien avec le jeu ni l'anti-triche)."""
 
 from __future__ import annotations
 
-from chaos_overlay.malus.base import EffectContext, Malus, register
+from PySide6.QtCore import QRect, Qt
+from PySide6.QtGui import QColor, QFont, QPainter
+
+from chaos_overlay.malus.base import Malus, register
 
 BACKGROUND = "#003399"
-MESSAGE = "VANGUARD ANTI-CHEAT CRITICAL ERROR\nDisconnecting..."
+MESSAGE = "ANTI-CHEAT CRITICAL ERROR\nDisconnecting..."
+FONT_SIZE = 28
 
 
 @register
 class FakeCrash(Malus):
     key = "fake_crash"
+    label = "Faux crash"
+    description = "Faux écran bleu d'erreur critique, le temps d'une frayeur."
     default_duration_ms = 2500
+    fade_in_ms = 0  # un crash ne prévient pas
+    fade_out_ms = 0
 
-    def _draw(self, ctx: EffectContext) -> None:
-        canvas = ctx.canvas
-        self._track(canvas.create_rectangle(0, 0, ctx.width, ctx.height, fill=BACKGROUND, outline=""))
-        self._track(
-            canvas.create_text(
-                ctx.width // 2,
-                ctx.height // 2,
-                text=MESSAGE,
-                fill="white",
-                font=("Courier", 28, "bold"),
-                justify="center",
-            )
-        )
+    def paint(self, painter: QPainter, elapsed_ms: int) -> None:
+        ctx = self.ctx
+        painter.fillRect(0, 0, ctx.width, ctx.height, QColor(BACKGROUND))
+        font = QFont("Courier New")
+        font.setPixelSize(ctx.px(FONT_SIZE * 4 / 3))  # 28 pt ≈ 37 px
+        font.setBold(True)
+        painter.setFont(font)
+        painter.setPen(QColor("white"))
+        painter.drawText(QRect(0, 0, ctx.width, ctx.height), Qt.AlignmentFlag.AlignCenter, MESSAGE)

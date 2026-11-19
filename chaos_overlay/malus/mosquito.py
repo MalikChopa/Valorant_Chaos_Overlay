@@ -1,8 +1,12 @@
-"""Mosquito : un carré noir de 15 px qui rebondit sur les bords de l'écran."""
+"""Mosquito : un carré noir de 15 px (en 1080p) qui rebondit sur les bords de l'écran."""
 
 from __future__ import annotations
 
-from chaos_overlay.malus.base import EffectContext, Malus, register
+import random
+
+from PySide6.QtGui import QColor, QPainter
+
+from chaos_overlay.malus.base import Malus, register
 
 SIZE = 15
 TICK_MS = 30
@@ -14,33 +18,38 @@ CHANGE_DIRECTION_CHANCE = 0.05
 @register
 class Mosquito(Malus):
     key = "mosquito"
+    label = "Moustique"
+    description = "Un petit carré noir qui vole partout sur l'écran."
     default_duration_ms = 10000
+    fade_in_ms = 0
+    fade_out_ms = 0
 
-    def __init__(self, duration_ms: int | None = None) -> None:
-        super().__init__(duration_ms)
-        # Position, vitesse et carré propres à cette instance (plus d'état partagé).
-        self.x = 0
-        self.y = 0
+    def setup(self) -> None:
+        # Hasard propre à l'instance : la trajectoire ne dépend que du tirage de départ.
+        self.rng = random.Random(self.ctx.rng.random())
+        self.x = self.ctx.width // 2
+        self.y = self.ctx.height // 2
         self.dx = START_SPEED
         self.dy = START_SPEED
-        self.square = 0
+        self.ticks = 0
 
-    def _draw(self, ctx: EffectContext) -> None:
-        self.x, self.y = ctx.width // 2, ctx.height // 2
-        self.square = self._track(
-            ctx.canvas.create_rectangle(self.x, self.y, self.x + SIZE, self.y + SIZE, fill="black", outline="")
-        )
-        self._move(ctx)
+    def advance_to(self, elapsed_ms: int) -> None:
+        """Fait avancer la simulation jusqu'à `elapsed_ms` (un pas toutes les 30 ms)."""
+        size, scale = self.ctx.px(SIZE), self.ctx.scale
+        while self.ticks < elapsed_ms // TICK_MS:
+            self.ticks += 1
+            self.x += round(self.dx * scale)
+            self.y += round(self.dy * scale)
+            if self.x <= 0 or self.x >= self.ctx.width - size:
+                self.dx *= -1
+            if self.y <= 0 or self.y >= self.ctx.height - size:
+                self.dy *= -1
+            self.x = max(0, min(self.ctx.width - size, self.x))
+            self.y = max(0, min(self.ctx.height - size, self.y))
+            if self.rng.random() < CHANGE_DIRECTION_CHANCE:
+                self.dx, self.dy = self.rng.choice(SPEED_CHOICES), self.rng.choice(SPEED_CHOICES)
 
-    def _move(self, ctx: EffectContext) -> None:
-        """Avance d'un pas, rebondit sur les bords, change parfois de direction, puis se reprogramme."""
-        self.x += self.dx
-        self.y += self.dy
-        if self.x <= 0 or self.x >= ctx.width - SIZE:
-            self.dx *= -1
-        if self.y <= 0 or self.y >= ctx.height - SIZE:
-            self.dy *= -1
-        if ctx.rng.random() < CHANGE_DIRECTION_CHANCE:
-            self.dx, self.dy = ctx.rng.choice(SPEED_CHOICES), ctx.rng.choice(SPEED_CHOICES)
-        ctx.canvas.coords(self.square, self.x, self.y, self.x + SIZE, self.y + SIZE)
-        self._schedule(TICK_MS, lambda: self._move(ctx))
+    def paint(self, painter: QPainter, elapsed_ms: int) -> None:
+        self.advance_to(elapsed_ms)
+        size = self.ctx.px(SIZE)
+        painter.fillRect(self.x, self.y, size, size, QColor("black"))

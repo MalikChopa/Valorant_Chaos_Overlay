@@ -24,6 +24,10 @@ EXPECTED = [
     ("paranoia", 4000),
     ("screen_crack", 8000),
     ("mosquito", 10000),
+    ("sniper_scope", 8000),
+    ("low_hp", 8000),
+    ("fake_kill_feed", 6000),
+    ("drunk_crosshair", 10000),
 ]
 
 
@@ -46,7 +50,10 @@ def test_register_refuses_duplicate_key() -> None:
         key = "flashbang"
         default_duration_ms = 1
 
-        def _draw(self, ctx: object) -> None:  # type: ignore[override]
+        label = "Doublon"
+        description = "Doublon"
+
+        def paint(self, painter: object, elapsed_ms: int) -> None:  # type: ignore[override]
             pass
 
     with pytest.raises(ValueError):
@@ -63,13 +70,14 @@ def run_python(code: str) -> subprocess.CompletedProcess[str]:
 
 def test_import_malus_and_scheduler_has_no_side_effect() -> None:
     code = (
-        "import os, sys, tkinter\n"
+        "import os, sys\n"
         "cwd, out, err = os.getcwd(), sys.stdout, sys.stderr\n"
         "import chaos_overlay.malus, chaos_overlay.scheduler\n"
-        "assert tkinter._default_root is None, 'une fenetre Tk a ete creee'\n"
+        "from PySide6.QtCore import QCoreApplication\n"
+        "assert QCoreApplication.instance() is None, 'une application Qt a ete creee'\n"
         "assert os.getcwd() == cwd, 'chdir a l import'\n"
         "assert sys.stdout is out and sys.stderr is err, 'stdout remplace a l import'\n"
-        "assert len(chaos_overlay.malus.REGISTRY) == 11\n"
+        "assert len(chaos_overlay.malus.REGISTRY) == 15\n"
         "print('OK')\n"
     )
     result = run_python(code)
@@ -77,19 +85,21 @@ def test_import_malus_and_scheduler_has_no_side_effect() -> None:
     assert result.stdout.strip() == "OK"
 
 
-def test_scheduler_does_not_import_tkinter() -> None:
-    result = run_python("import sys, chaos_overlay.scheduler; print('tkinter' in sys.modules)")
+def test_scheduler_and_profiles_do_not_import_qt() -> None:
+    result = run_python("import sys, chaos_overlay.scheduler, chaos_overlay.profiles; print('PySide6' in sys.modules)")
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "False"
 
 
 def test_import_ui_and_app_opens_no_window() -> None:
     code = (
-        "import os, sys, tkinter\n"
+        "import os, sys\n"
         "cwd = os.getcwd()\n"
         "import chaos_overlay.ui.dashboard, chaos_overlay.ui.overlay, chaos_overlay.ui.splash\n"
         "import chaos_overlay.ui.roulette, chaos_overlay.app\n"
-        "assert tkinter._default_root is None, 'une fenetre Tk a ete creee'\n"
+        "from PySide6.QtCore import QCoreApplication\n"
+        "assert QCoreApplication.instance() is None, 'une application Qt a ete creee'\n"
+        "assert 'tkinter' not in sys.modules, 'tkinter importe'\n"
         "assert os.getcwd() == cwd\n"
         "print('OK')\n"
     )

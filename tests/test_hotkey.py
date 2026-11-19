@@ -52,7 +52,7 @@ class FakeUser32:
 
 
 class FakeAfter:
-    """Faux root.after : retient les appels programmés, on les lance à la main."""
+    """Faux `after` (QTimer.singleShot) : retient les appels programmés, on les lance à la main."""
 
     def __init__(self) -> None:
         self.scheduled: list[tuple[int, Callable[[], None]]] = []
@@ -123,7 +123,7 @@ def test_full_cycle_with_fake_user32() -> None:
     assert wait_for(lambda: hk._tokens.qsize() == 2)
     assert calls == []  # rien n'est appelé depuis le thread de travail
 
-    after.run_next()  # la scrutation Tk vide la file et se reprogramme
+    after.run_next()  # la scrutation vide la file et se reprogramme
     assert calls == [1, 1]
     assert [delay for delay, _ in after.scheduled] == [100]
 
@@ -184,9 +184,10 @@ def test_warning_text_no_longer_mentions_admin() -> None:
 
 def test_imports_without_window_and_without_keyboard_lib() -> None:
     code = (
-        "import sys, tkinter\n"
+        "import sys\n"
         "import chaos_overlay.app, chaos_overlay.hotkey, chaos_overlay.config, chaos_overlay.logs\n"
-        "assert tkinter._default_root is None, 'racine Tk creee'\n"
+        "from PySide6.QtCore import QCoreApplication\n"
+        "assert QCoreApplication.instance() is None, 'application Qt creee'\n"
         "assert 'keyboard' not in sys.modules, 'lib keyboard importee'\n"
     )
     result = subprocess.run(

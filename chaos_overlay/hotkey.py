@@ -6,8 +6,8 @@ Pas de hook clavier ni souris, pas d'envoi de touches, pas d'accès à un autre 
 Fonctionnement :
 - un thread démon enregistre HOME puis attend ses messages avec GetMessageW ;
 - à chaque WM_HOTKEY il dépose un jeton dans une queue.Queue ;
-- côté Tk, poll() vide la file toutes les 100 ms (root.after) et appelle le callback
-  dans le thread Tk. Le thread de travail ne touche jamais à Tk.
+- côté Qt, poll() vide la file toutes les 100 ms (QTimer.singleShot) et appelle le callback
+  dans le thread de l'interface. Le thread de travail ne touche jamais à Qt.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ POLL_INTERVAL_MS = 100
 START_TIMEOUT_S = 2.0
 STOP_TIMEOUT_S = 1.0
 
-# Planifie un appel dans la boucle Tk : la signature de root.after(ms, fonction).
+# Planifie un appel dans la boucle de l'interface : la signature de QTimer.singleShot(ms, fonction).
 Scheduler = Callable[[int, Callable[[], None]], object]
 
 
@@ -68,9 +68,9 @@ def _new_message() -> Any:
 
 
 class HomeHotkey:
-    """Appelle `callback` (dans le thread Tk) quand on appuie sur HOME, même si le jeu a le focus.
+    """Appelle `callback` (dans le thread de l'interface) quand on appuie sur HOME, même si le jeu a le focus.
 
-    `after` est root.after. `user32` sert aux tests (faux objet) ; None = le vrai user32.dll.
+    `after` programme un appel dans la boucle Qt. `user32` sert aux tests (faux objet) ; None = le vrai user32.dll.
     """
 
     def __init__(self, callback: Callable[[], None], after: Scheduler, user32: Any = None) -> None:
@@ -129,7 +129,7 @@ class HomeHotkey:
             logger.warning("Raccourci HOME : le thread ne s'est pas arrêté (thread démon, il mourra avec l'appli)")
 
     def poll(self) -> int:
-        """Vide la file : un appel du callback par jeton. Renvoie le nombre d'appels (thread Tk)."""
+        """Vide la file : un appel du callback par jeton. Renvoie le nombre d'appels (thread de l'interface)."""
         count = 0
         while True:
             try:
@@ -140,7 +140,7 @@ class HomeHotkey:
             self.callback()
 
     def _poll_loop(self) -> None:
-        """Scrutation périodique, reprogrammée par root.after tant que le raccourci est actif."""
+        """Scrutation périodique, reprogrammée par `after` tant que le raccourci est actif."""
         if not self._polling:
             return
         try:

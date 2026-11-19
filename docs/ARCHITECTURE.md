@@ -1,58 +1,50 @@
-# Architecture : Valorant Chaos Overlay (refonte 2026-11-10)
+# Architecture : Chaos Overlay v3 (2026-11-19)
 
-Référence : `docs/FICHE.md` (validée le 2026-11-10). Point de départ : `valorant_roulette.py` (commit a74abcb). Ce que voit le streamer ne change pas : mêmes couleurs, textes, tailles, durées et timings que le code actuel, sauf les corrections listées en §4.
+La v2 (refonte du 2026-11-10, Tkinter + customtkinter, Valorant seulement) est dans l'historique git (`82a83c8`). La v3 passe à PySide6 (Qt 6) et s'ouvre à tous les FPS, choix de Malik du 2026-11-19.
 
 ## 1. Règle absolue
-L'overlay est **passif**. Seules API Win32 permises : styles de fenêtre (click-through) et raccourci clavier enregistré (`RegisterHotKey`). Interdit : lecture/écriture mémoire d'un autre processus, injection, envoi de touches ou de clics, capture d'écran du jeu, détection du jeu, tout ce qui touche Vanguard.
+L'overlay est **passif**. Seules API Win32 permises : styles de NOTRE fenêtre (click-through) et raccourci clavier enregistré (`RegisterHotKey`). Interdit : lecture/écriture mémoire d'un autre processus, injection, envoi de touches ou de clics, capture d'écran, détection du jeu, tout ce qui touche un anti-triche. Un compteur d'images/s du jeu a été écarté pour cette raison (il faudrait lire ses événements de rendu).
 
-## 2. Arborescence cible
+## 2. Arborescence
 ```
 chaos_overlay/
-  __init__.py          # __version__ = "2.0.0"
-  __main__.py          # python -m chaos_overlay → app.main()
-  app.py               # main() : NullWriter, crash_log, création Tk, assemblage
-  paths.py             # app_dir() (dossier de l'exe ou du projet), resource_path() (_MEIPASS) : sans chdir
-  theme.py             # palette et polices (constantes reprises du code actuel)
-  scheduler.py         # logique pure : tirage, séquence de la roulette, validation de fréquence
-  config.py            # (J2) dataclass Config, load/save JSON, validation ; pure
-  hotkey.py            # (J2) RegisterHotKey dans un thread dédié + file d'attente lue par root.after
-  win32.py             # make_click_through(hwnd) -> bool ; seul fichier qui appelle ctypes.windll (hotkey.py a sa propre instance WinDLL user32, limitée à RegisterHotKey, UnregisterHotKey, GetMessageW, PostThreadMessageW : écart accepté le 2026-11-10)
+  __init__.py      # __version__ = "3.0.0"
+  __main__.py      # python -m chaos_overlay → app.main() ; aussi le point d'entrée PyInstaller
+  app.py           # ChaosApp : états (arrêt, marche, pause), minuteurs, commandes ; main()
+  config.py        # Config (dataclass), load/save JSON validés champ par champ ; pur (sans Qt)
+  profiles.py      # GameProfile : zones du HUD par jeu ; pur (sans Qt)
+  scheduler.py     # tirage et rythme de la roulette ; pur (sans Qt)
+  hotkey.py        # HOME via RegisterHotKey dans un thread, file lue par la boucle Qt
+  win32.py         # make_click_through(hwnd) : seul fichier qui appelle ctypes.windll
+  logs.py, paths.py, theme.py (palette + feuille de style Qt)
   malus/
-    __init__.py        # REGISTRY : dict[str, type[Malus]], décorateur @register ; importe tous les malus
-    base.py            # Malus (ABC) + EffectContext
-    flashbang.py tunnel_vision.py hud_blocker.py fake_crosshair.py scanlines.py
-    mlg_gif.py fake_crash.py blind_spot.py paranoia.py screen_crack.py mosquito.py
+    base.py        # EffectContext, Malus (render/paint, fondus), REGISTRY, @register
+    15 modules, un par malus
   ui/
-    overlay.py         # fenêtre transparente plein écran + Canvas, fournit l'EffectContext
-    splash.py          # écran de chargement
-    dashboard.py       # Dashboard CustomTkinter (identique visuellement)
-    roulette.py        # affichage de la roulette, piloté par scheduler.roulette_delays()
-valorant_roulette.py   # garde ce nom (releases existantes) : 3 lignes qui appellent chaos_overlay.app.main()
-tests/                 # pytest, sans fenêtre
+    overlay.py     # OverlayWindow : fenêtre transparente, liste des malus actifs, animation à la demande
+    roulette.py    # Roulette (état + rythme) et paint_roulette
+    dashboard.py   # Dashboard : profil, écran, fréquence, malus (case, durée, ▶ tester), état
+    tray.py        # icône de la zone de notification et son menu
+    icon.py        # icône dessinée en code (fenêtres, notification, .ico de l'exe)
+    splash.py      # écran de démarrage
+scripts/make_icon.py  # régénère assets/chaos_overlay.ico
+tests/                # pytest + pytest-qt, plateforme offscreen
 ```
-Noms de malus (clés) inchangés : `flashbang, tunnel_vision, hud_blocker, fake_crosshair, scanlines, mlg_fullscreen, fake_crash, blind_spot, paranoia, screen_crack, mosquito` (ordre d'affichage conservé).
 
 ## 3. Contrats
-- `EffectContext` (dataclass) : `canvas`, `width`, `height`, `after(ms, fn) -> str`, `after_cancel(id)`, `rng: random.Random`.
-- `Malus` : attributs de classe `key: str`, `default_duration_ms: int`. Méthodes : `start(ctx)`, `stop()`. Chaque **instance** garde ses propres éléments de canvas et ids `after` ; `stop()` les supprime tous et est idempotente. Une instance par déclenchement.
-- `scheduler` (aucun import tkinter) :
-  - `pick(active: Sequence[str], rng) -> str` (renvoie `"rien"` si vide, comme aujourd'hui) ;
-  - `roulette_delays(spins=30, start_delay=50) -> list[int]` reproduit exactement la formule actuelle (`new_delay = delay + int(120 / spins_left)`) ;
-  - `parse_frequency(text) -> int | None` (entier ≥ 1, sinon None).
-- Les modules hors `ui/`, `win32.py`, `hotkey.py`, `app.py` s'importent sans display et sans effet de bord (pas de `os.chdir`, pas de remplacement de stdout à l'import).
-- Typage : annotations partout ; `mypy --strict chaos_overlay` sans erreur (`ignore_missing_imports` pour customtkinter seulement).
+- `EffectContext` (gelé) : `width`, `height`, `rng`, `profile` ; `scale` = hauteur / 1080, `px(v)` convertit une taille 1080p.
+- `Malus` : attributs de classe `key`, `label`, `description`, `default_duration_ms`, `fade_in_ms`, `fade_out_ms`. `setup()` fait les tirages une fois ; `paint(painter, elapsed_ms)` dessine ; `render()` applique le fondu et ne dessine rien avant 0 ni après la durée. Aucune fenêtre, aucun minuteur : le rendu d'un instant est déterministe.
+- `OverlayWindow` : `add_effect(malus)` ; un `QTimer` de 33 ms tourne seulement tant qu'un malus ou la roulette est visible, retire les malus finis et redessine. Drapeaux Qt : sans bordure, au premier plan, `Tool`, `WindowTransparentForInput`, `WindowDoesNotAcceptFocus` ; sous Windows, `win32.make_click_through` ajoute `WS_EX_NOACTIVATE` et vérifie les styles.
+- `Roulette` : 30 noms à délais croissants (`scheduler.roulette_delays`, formule de la v1), puis le résultat 1,5 s, puis `on_done(clé)`.
+- `ChaosApp` : le minuteur ne tourne qu'en marche ; la pause garde le temps restant ; « Lancer maintenant » est ignoré pendant une roulette ; « Tester » affiche un malus sans roulette ni minuteur. `after`, `clock` et `hotkey` sont injectables (tests).
 
-## 4. Corrections de bugs (J1)
-1. **Chevauchement** : l'état mutable partagé (`self.mosq_*`, `self.is_animating`, `self.gif_canvas_obj`) disparaît, l'état vit dans l'instance du malus. Cadence inchangée (le minuteur repart dès que le malus démarre, comme aujourd'hui) : deux malus peuvent donc se superposer, mais chacun se nettoie seul.
-2. **GIF** : le chargement se fait au premier déclenchement, plus au démarrage, et seulement pour les images affichées pendant la durée de l'effet (ceil(6000 / 40) = 150 images au lieu d'environ 608). Le délai de 40 ms est conservé. `mlg.gif` absent : le malus ne fait rien, comme aujourd'hui, et le journal le note.
-3. **Click-through** : `make_click_through` renvoie un booléen. En cas d'échec, un avertissement s'affiche (messagebox), car l'overlay bloquerait les clics.
-4. **Effets de bord à l'import** déplacés dans `main()`. `crash_log.txt` est écrit dans `app_dir()`.
+## 4. Choix et compromis
+- **PySide6-Essentials** plutôt que PySide6 complet : seuls QtCore, QtGui, QtWidgets sont utilisés ; la spec exclut le reste.
+- **GIF lu en flux** (`GifStream` sur `QImageReader`) : une seule image décodée en mémoire, au lieu de 150 images en cache dans la v2.
+- **30 i/s** et animation à la demande : fluide sans peser sur le jeu.
+- **Tailles proportionnelles** à la hauteur d'écran, identiques à la v2 en 1080p.
+- **Style Fusion + thème sombre** : même rendu partout, barre de titre sombre sous Windows 10/11.
 
-## 5. Jalons
-- **J1, cœur (opus)** : arborescence §2 sans `config.py` ni `hotkey.py` ; la lib `keyboard` reste pour HOME. Bugs de §4. Tests : `pick` (rng à graine), `roulette_delays` (égalité avec la formule d'origine, 30 valeurs), `parse_frequency`, registre (11 clés, ordre, `default_duration_ms` égal aux durées actuelles : 2500, 8000, 12000, 10000, 10000, 6000, 2500, 8000, 4000, 8000, 10000), import de `chaos_overlay.malus` sans display, `stop()` idempotent avec un faux canvas. Critères : `pytest` vert, `mypy --strict` vert, `python -c "import chaos_overlay.malus"` sans erreur.
-- **J2, config + HOME (opus)** : `config.py` (JSON `chaos_config.json` dans `app_dir()`, champs : `frequency_s`, `enabled{key: bool}`, `durations_ms{key: int}`, `hotkey="home"` ; un fichier absent ou invalide donne les valeurs par défaut et un avertissement journalisé, sans crash ; une clé inconnue est ignorée). Le Dashboard enregistre au clic « Démarrer ». `hotkey.py` : `RegisterHotKey(None, id, 0, VK_HOME)` dans un thread avec sa propre boucle `GetMessageW`, le signal passe par une `queue.Queue` lue toutes les 100 ms par `root.after`. Échec de l'enregistrement (touche déjà prise) : avertissement. La lib `keyboard` est retirée. Tests : config (aller-retour, fichier corrompu, valeurs hors bornes, clé inconnue).
-- **J3, livraison (sonnet)** : `pyproject.toml` (Python ≥ 3.10, dépendances aux versions figées), `.gitignore`, `chaos_overlay.spec` (embarque `mlg.gif`), `LICENSE` (MIT, 2026, Malik), README (11 malus, installation venv, build, schéma mermaid, section « Ce que l'overlay ne fait pas », mention honnête sur Vanguard). Statut de `mlg.gif` selon la décision de Malik.
-
-## 6. Non vérifié
-- `RegisterHotKey` quand la fenêtre au premier plan tourne en administrateur (UIPI) : non vérifié à la source. À tester sur le bureau avec une fenêtre lancée en admin, avec l'accord de Malik. Le jeu ne sera jamais lancé.
-- Gain de mémoire du GIF : estimation (environ 4 fois moins d'images), à mesurer au lancement sur le bureau.
+## 5. Non vérifié
+- Rien n'a été lancé sous Windows pour la v3 : tests, mypy et build PyInstaller ont tourné sous macOS (Qt offscreen). À vérifier sur le bureau Windows : transparence aux clics réelle, rendu par-dessus un jeu en plein écran fenêtré, HOME, icône de notification, taille de l'exe.
+- Coût CPU de l'overlay translucide plein écran à 30 i/s : non mesuré.
