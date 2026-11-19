@@ -1,79 +1,20 @@
-"""Faux canvas et faux minuteur Tk pour tester les malus sans fenêtre."""
+"""Faux minuteur et aide au rendu pour tester sans fenêtre ni attente."""
 
 from __future__ import annotations
 
 import random
 from collections.abc import Callable
-from typing import Any
 
-from chaos_overlay.malus.base import EffectContext
+from PySide6.QtGui import QColor, QImage, QPainter
 
-
-def _flatten(values: tuple[Any, ...]) -> tuple[Any, ...]:
-    """Aplati les coordonnées comme tkinter : f([1, 2], 3) et f(1, 2, 3) donnent le même appel."""
-    flat: list[Any] = []
-    for value in values:
-        if isinstance(value, (list, tuple)):
-            flat.extend(_flatten(tuple(value)))
-        else:
-            flat.append(value)
-    return tuple(flat)
-
-
-class FakeCanvas:
-    """Enregistre chaque appel (avec l'heure du faux minuteur) au lieu de dessiner."""
-
-    def __init__(self, clock: "FakeClock | None" = None) -> None:
-        self.clock = clock
-        self.calls: list[tuple[Any, ...]] = []
-        self.alive: set[int] = set()
-        self.deleted: list[int] = []
-        self._next_id = 1
-
-    def _now(self) -> int:
-        return self.clock.now if self.clock is not None else 0
-
-    def _create(self, kind: str, args: tuple[Any, ...], kwargs: dict[str, Any]) -> int:
-        item = self._next_id
-        self._next_id += 1
-        self.alive.add(item)
-        self.calls.append((self._now(), kind, item, _flatten(args), sorted(kwargs.items())))
-        return item
-
-    def create_rectangle(self, *args: Any, **kwargs: Any) -> int:
-        return self._create("rectangle", args, kwargs)
-
-    def create_oval(self, *args: Any, **kwargs: Any) -> int:
-        return self._create("oval", args, kwargs)
-
-    def create_polygon(self, *args: Any, **kwargs: Any) -> int:
-        return self._create("polygon", args, kwargs)
-
-    def create_line(self, *args: Any, **kwargs: Any) -> int:
-        return self._create("line", args, kwargs)
-
-    def create_text(self, *args: Any, **kwargs: Any) -> int:
-        return self._create("text", args, kwargs)
-
-    def create_image(self, *args: Any, **kwargs: Any) -> int:
-        return self._create("image", args, kwargs)
-
-    def delete(self, item: int) -> None:
-        self.alive.discard(item)
-        self.deleted.append(item)
-        self.calls.append((self._now(), "delete", item))
-
-    def coords(self, item: int, *args: Any) -> None:
-        self.calls.append((self._now(), "coords", item, _flatten(args)))
-
-    def itemconfig(self, item: int, **kwargs: Any) -> None:
-        self.calls.append((self._now(), "itemconfig", item, sorted(kwargs.items())))
+from chaos_overlay.malus.base import EffectContext, Malus
+from chaos_overlay.profiles import DEFAULT_PROFILE, get_profile
 
 
 class FakeClock:
     """Faux `after` / `after_cancel` : un temps virtuel en ms qu'on fait avancer à la main.
 
-    À échéance égale, les rappels tournent dans l'ordre où ils ont été programmés (comme Tk).
+    À échéance égale, les rappels tournent dans l'ordre où ils ont été programmés (comme Qt et Tk).
     """
 
     def __init__(self) -> None:
@@ -104,23 +45,36 @@ class FakeClock:
         self.now = max(self.now, end_ms)
 
 
-class FakeRoot:
-    """Imite root.after pour l'ancien code (qui appelle self.root.after)."""
-
-    def __init__(self, clock: FakeClock) -> None:
-        self.after = clock.after
-        self.after_cancel = clock.after_cancel
+def make_context(seed: int = 0, width: int = 1920, height: int = 1080, profile: str = DEFAULT_PROFILE) -> EffectContext:
+    """EffectContext d'un écran de test."""
+    return EffectContext(width=width, height=height, rng=random.Random(seed), profile=get_profile(profile))
 
 
-def make_context(
-    clock: FakeClock, canvas: FakeCanvas, seed: int = 0, width: int = 1920, height: int = 1080
-) -> EffectContext:
-    """EffectContext branché sur les faux (le typage strict ne s'applique pas aux tests)."""
-    return EffectContext(
-        canvas=canvas,  # type: ignore[arg-type]
-        width=width,
-        height=height,
-        after=clock.after,
-        after_cancel=clock.after_cancel,
-        rng=random.Random(seed),
+def blank_image(width: int = 1920, height: int = 1080) -> QImage:
+    image = QImage(width, height, QImage.Format.Format_ARGB32_Premultiplied)
+    image.fill(QColor(0, 0, 0, 0))
+    return image
+
+
+def render(malus: Malus, elapsed_ms: int) -> QImage:
+    """Dessine le malus à l'instant `elapsed_ms` sur une image transparente de la taille de l'écran."""
+    image = blank_image(malus.ctx.width, malus.ctx.height)
+    painter = QPainter(image)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    malus.render(painter, elapsed_ms)
+    painter.end()
+    return image
+
+
+def painted_pixels(image: QImage, step: int = 8) -> int:
+    """Nombre de pixels non transparents (échantillonnés tous les `step` px)."""
+    return sum(
+        1
+        for x in range(0, image.width(), step)
+        for y in range(0, image.height(), step)
+        if image.pixelColor(x, y).alpha() > 0
     )
+
+
+def color_at(image: QImage, x: float, y: float) -> QColor:
+    return image.pixelColor(int(x), int(y))

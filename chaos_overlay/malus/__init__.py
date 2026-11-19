@@ -19,6 +19,10 @@ from chaos_overlay.malus import blind_spot
 from chaos_overlay.malus import paranoia
 from chaos_overlay.malus import screen_crack
 from chaos_overlay.malus import mosquito
+from chaos_overlay.malus import sniper_scope
+from chaos_overlay.malus import low_hp
+from chaos_overlay.malus import fake_kill_feed
+from chaos_overlay.malus import drunk_crosshair
 # isort: on
 
 __all__ = [
@@ -37,4 +41,14 @@ __all__ = [
     "paranoia",
     "screen_crack",
     "mosquito",
+    "sniper_scope",
+    "low_hp",
+    "fake_kill_feed",
+    "drunk_crosshair",
 ]
+
+
+def label_of(key: str) -> str:
+    """Nom affiché d'un malus (ou de « rien » quand aucun malus n'est coché)."""
+    malus_class = REGISTRY.get(key)
+    return malus_class.label if malus_class is not None else key.replace("_", " ").capitalize()

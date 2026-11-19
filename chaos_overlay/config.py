@@ -1,6 +1,6 @@
 """Réglages enregistrés dans chaos_config.json (à côté de l'exe, ou à la racine du projet).
 
-Module pur : aucun import de tkinter au chargement, aucune fenêtre.
+Module pur : aucun import de Qt au chargement, aucune fenêtre.
 Un fichier absent donne les valeurs par défaut ; un fichier abîmé aussi, avec un avertissement
 dans le journal, mais jamais de plantage.
 """
@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from chaos_overlay.paths import app_dir
+from chaos_overlay.profiles import DEFAULT_PROFILE, PROFILES
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,8 @@ MIN_DURATION_MS = 500
 MAX_DURATION_MS = 60000
 DEFAULT_HOTKEY = "home"
 SUPPORTED_HOTKEYS = ("home",)
+DEFAULT_SCREEN = 0
+MAX_SCREEN = 15
 
 
 def default_malus_durations() -> dict[str, int]:
@@ -44,11 +47,13 @@ def _default_enabled() -> dict[str, bool]:
 
 @dataclass
 class Config:
-    """Réglages du chaos : fréquence, malus cochés, durées, touche du Dashboard."""
+    """Réglages du chaos : fréquence, malus cochés, durées, profil de jeu, écran, touche du Dashboard."""
 
     frequency_s: int = DEFAULT_FREQUENCY_S
     enabled: dict[str, bool] = field(default_factory=_default_enabled)
     durations_ms: dict[str, int] = field(default_factory=default_malus_durations)
+    profile: str = DEFAULT_PROFILE
+    screen: int = DEFAULT_SCREEN
     hotkey: str = DEFAULT_HOTKEY
 
     def to_dict(self) -> dict[str, Any]:
@@ -57,6 +62,8 @@ class Config:
             "frequency_s": self.frequency_s,
             "enabled": dict(self.enabled),
             "durations_ms": dict(self.durations_ms),
+            "profile": self.profile,
+            "screen": self.screen,
             "hotkey": self.hotkey,
         }
 
@@ -69,6 +76,11 @@ def config_path() -> Path:
 def clamp_frequency(seconds: int) -> int:
     """Ramène une fréquence dans les bornes 1..3600 s."""
     return max(MIN_FREQUENCY_S, min(MAX_FREQUENCY_S, seconds))
+
+
+def clamp_duration(milliseconds: int) -> int:
+    """Ramène une durée de malus dans les bornes 500..60000 ms."""
+    return max(MIN_DURATION_MS, min(MAX_DURATION_MS, milliseconds))
 
 
 def _is_int(value: object) -> bool:
@@ -144,6 +156,22 @@ def _read_hotkey(raw: Mapping[str, Any]) -> str:
     return DEFAULT_HOTKEY
 
 
+def _read_profile(raw: Mapping[str, Any]) -> str:
+    value = raw.get("profile", DEFAULT_PROFILE)
+    if isinstance(value, str) and value in PROFILES:
+        return value
+    logger.warning("Config : profile=%r inconnu (%s attendu), profil générique utilisé", value, ", ".join(PROFILES))
+    return DEFAULT_PROFILE
+
+
+def _read_screen(raw: Mapping[str, Any]) -> int:
+    value = raw.get("screen", DEFAULT_SCREEN)
+    if _is_int(value) and 0 <= value <= MAX_SCREEN:
+        return int(value)
+    logger.warning("Config : screen=%r invalide (entier de 0 à %d attendu), écran principal utilisé", value, MAX_SCREEN)
+    return DEFAULT_SCREEN
+
+
 def from_dict(raw: Mapping[str, Any], malus_defaults: Mapping[str, int] | None = None) -> Config:
     """Construit une Config valide champ par champ ; un champ invalide reprend sa valeur par défaut."""
     defaults = dict(malus_defaults) if malus_defaults is not None else default_malus_durations()
@@ -151,6 +179,8 @@ def from_dict(raw: Mapping[str, Any], malus_defaults: Mapping[str, int] | None =
         frequency_s=_read_frequency(raw),
         enabled=_read_enabled(raw, list(defaults)),
         durations_ms=_read_durations(raw, defaults),
+        profile=_read_profile(raw),
+        screen=_read_screen(raw),
         hotkey=_read_hotkey(raw),
     )
 

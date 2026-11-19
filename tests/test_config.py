@@ -221,13 +221,48 @@ def test_custom_malus_defaults(tmp_path: Path) -> None:
     assert cfg.durations_ms == {"a": 1000, "b": 2000}
 
 
-def test_import_config_without_tkinter() -> None:
+def test_import_config_without_qt() -> None:
     code = (
         "import sys\n"
         "import chaos_overlay.config\n"
-        "assert 'tkinter' not in sys.modules, 'tkinter importe'\n"
+        "assert 'PySide6' not in sys.modules, 'Qt importe'\n"
     )
     result = subprocess.run(
         [sys.executable, "-c", code], cwd=PROJECT_ROOT, capture_output=True, text=True, timeout=60
     )
     assert result.returncode == 0, result.stderr
+
+
+def test_defaults_profile_and_screen() -> None:
+    cfg = Config()
+    assert (cfg.profile, cfg.screen) == ("generic", 0)
+
+
+def test_v2_file_without_profile_or_screen_still_loads(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    """Un chaos_config.json écrit par la v2 reste valide : les nouveaux champs prennent leur défaut."""
+    path = write_json(tmp_path / "c.json", {"frequency_s": 30, "enabled": {"flashbang": False}, "hotkey": "home"})
+    cfg = config.load(path)
+    assert (cfg.frequency_s, cfg.enabled["flashbang"], cfg.profile, cfg.screen) == (30, False, "generic", 0)
+    assert warnings_of(caplog) == []
+
+
+@pytest.mark.parametrize("profile", ["valorant", "cs2", "apex", "overwatch2", "generic"])
+def test_known_profiles_are_kept(tmp_path: Path, profile: str) -> None:
+    assert config.load(write_json(tmp_path / "c.json", {"profile": profile})).profile == profile
+
+
+@pytest.mark.parametrize("value", ["fortnite", 3, None, ""])
+def test_unknown_profile_falls_back(tmp_path: Path, caplog: pytest.LogCaptureFixture, value: Any) -> None:
+    assert config.load(write_json(tmp_path / "c.json", {"profile": value})).profile == "generic"
+    assert len(warnings_of(caplog)) == 1
+
+
+@pytest.mark.parametrize(("value", "expected"), [(0, 0), (2, 2), (15, 15), (-1, 0), (16, 0), (True, 0), ("1", 0)])
+def test_screen_bounds(tmp_path: Path, value: Any, expected: int) -> None:
+    assert config.load(write_json(tmp_path / "c.json", {"screen": value})).screen == expected
+
+
+def test_clamp_duration() -> None:
+    assert config.clamp_duration(10) == 500
+    assert config.clamp_duration(99999) == 60000
+    assert config.clamp_duration(1234) == 1234

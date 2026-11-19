@@ -1,100 +1,107 @@
-"""Contrat commun des malus : contexte d'affichage, classe de base et registre."""
+"""Contrat commun des malus : contexte, classe de base et registre.
+
+Un malus est un objet qui sait se dessiner à un instant donné : `render(painter, elapsed_ms)`.
+Il ne crée ni fenêtre ni minuteur. L'overlay l'appelle à chaque image et le retire quand
+`is_finished(elapsed_ms)` devient vrai. Conséquences :
+- plusieurs malus se superposent sans partager d'état ;
+- un test peut dessiner n'importe quel instant dans une QImage, sans fenêtre ni attente.
+
+Les tirages au hasard se font une fois, dans `setup()`, au déclenchement : le rendu d'un
+instant donné est donc toujours le même.
+"""
 
 from __future__ import annotations
 
 import random
-import tkinter as tk
 from abc import ABC, abstractmethod
-from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import ClassVar, TypeVar
 
+from PySide6.QtGui import QPainter
 
-@dataclass
+from chaos_overlay.profiles import DEFAULT_PROFILE, GameProfile, get_profile
+
+# Hauteur d'écran de référence : à 1080 px, les tailles des malus sont celles de la v2.
+REFERENCE_HEIGHT = 1080
+
+
+@dataclass(frozen=True)
 class EffectContext:
-    """Ce dont un malus a besoin pour dessiner : le canvas de l'overlay et le minuteur Tk."""
+    """Ce dont un malus a besoin : la taille de l'écran, le hasard et le profil de jeu."""
 
-    canvas: tk.Canvas
     width: int
     height: int
-    after: Callable[[int, Callable[[], None]], str]
-    after_cancel: Callable[[str], None]
     rng: random.Random
+    profile: GameProfile = field(default_factory=lambda: get_profile(DEFAULT_PROFILE))
+
+    @property
+    def scale(self) -> float:
+        """Facteur d'échelle : 1.0 en 1080p, 1.33 en 1440p, 2.0 en 4K."""
+        return self.height / REFERENCE_HEIGHT
+
+    def px(self, value: float) -> int:
+        """Convertit une taille pensée pour du 1080p en pixels de cet écran (au moins 1)."""
+        return max(1, round(value * self.scale))
 
 
 class Malus(ABC):
-    """Un effet visuel. Une instance par déclenchement : elle garde ses propres éléments.
+    """Un effet visuel. Une instance par déclenchement, qui garde ses propres tirages.
 
-    Les sous-classes définissent `key`, `default_duration_ms` et `_draw()`.
-    `start()` dessine puis programme `stop()` après la durée de l'effet.
-    `stop()` efface tout ce que l'instance a créé ; on peut l'appeler plusieurs fois.
+    Les sous-classes définissent `key`, `label`, `description`, `default_duration_ms` et
+    `paint()`. Elles peuvent régler les fondus (`fade_in_ms`, `fade_out_ms`) et faire
+    leurs tirages au hasard dans `setup()`.
     """
 
     key: ClassVar[str]
+    label: ClassVar[str]
+    description: ClassVar[str]
     default_duration_ms: ClassVar[int]
+    fade_in_ms: ClassVar[int] = 150
+    fade_out_ms: ClassVar[int] = 300
 
-    def __init__(self, duration_ms: int | None = None) -> None:
-        if duration_ms is None:
-            duration_ms = self.default_duration_ms
-        self.duration_ms = duration_ms
-        self._ctx: EffectContext | None = None
-        self._items: list[int] = []
-        self._pending_after_ids: set[str] = set()
-        self._stopped = False
+    def __init__(self, ctx: EffectContext, duration_ms: int | None = None) -> None:
+        self.ctx = ctx
+        self.duration_ms = self.default_duration_ms if duration_ms is None else duration_ms
+        self.setup()
 
-    @property
-    def is_running(self) -> bool:
-        """Vrai entre start() et stop()."""
-        return self._ctx is not None and not self._stopped
+    def setup(self) -> None:
+        """Tirages au hasard et préparation, faits une seule fois au déclenchement."""
 
-    def start(self, ctx: EffectContext) -> None:
-        """Affiche l'effet et programme sa fin."""
-        if self._ctx is not None:
-            raise RuntimeError("Une instance de malus ne sert qu'une fois : crée-en une nouvelle.")
-        self._ctx = ctx
-        self._draw(ctx)
-        self._schedule(self.duration_ms, self.stop)
+    def is_finished(self, elapsed_ms: int) -> bool:
+        """Vrai quand l'effet a atteint sa durée."""
+        return elapsed_ms >= self.duration_ms
 
-    def stop(self) -> None:
-        """Annule les minuteurs en attente et efface les éléments du canvas (idempotent)."""
-        if self._stopped:
+    def opacity(self, elapsed_ms: int) -> float:
+        """Opacité de l'effet (0 à 1) : fondu d'entrée, plein, fondu de sortie."""
+        if elapsed_ms < 0 or self.is_finished(elapsed_ms):
+            return 0.0
+        # Les fondus ne dépassent jamais la moitié de l'effet (utile pour les durées courtes).
+        half = self.duration_ms / 2
+        fade_in = min(self.fade_in_ms, half)
+        fade_out = min(self.fade_out_ms, half)
+        value = 1.0
+        if fade_in > 0 and elapsed_ms < fade_in:
+            value = elapsed_ms / fade_in
+        remaining = self.duration_ms - elapsed_ms
+        if fade_out > 0 and remaining < fade_out:
+            value = min(value, remaining / fade_out)
+        return max(0.0, min(1.0, value))
+
+    def render(self, painter: QPainter, elapsed_ms: int) -> None:
+        """Dessine l'effet à l'instant `elapsed_ms` (rien avant le début ni après la fin)."""
+        alpha = self.opacity(elapsed_ms)
+        if alpha <= 0.0:
             return
-        self._stopped = True
-        ctx = self._ctx
-        if ctx is None:
-            return
-        for after_id in list(self._pending_after_ids):
-            ctx.after_cancel(after_id)
-        self._pending_after_ids.clear()
-        for item in self._items:
-            ctx.canvas.delete(item)
-        self._items.clear()
+        painter.save()
+        try:
+            painter.setOpacity(painter.opacity() * alpha)
+            self.paint(painter, elapsed_ms)
+        finally:
+            painter.restore()
 
     @abstractmethod
-    def _draw(self, ctx: EffectContext) -> None:
-        """Crée les éléments de l'effet (avec `_track`) et lance l'animation éventuelle."""
-
-    def _track(self, item: int) -> int:
-        """Retient un élément du canvas pour l'effacer au stop()."""
-        self._items.append(item)
-        return item
-
-    def _schedule(self, delay_ms: int, callback: Callable[[], None]) -> None:
-        """Programme `callback` dans `delay_ms` ms ; stop() l'annule s'il n'a pas encore tourné."""
-        ctx = self._ctx
-        if ctx is None or self._stopped:
-            return
-        # La liste sert de boîte : on connaît l'id seulement après l'appel à after().
-        id_box: list[str] = []
-
-        def run() -> None:
-            self._pending_after_ids.discard(id_box[0])
-            if not self._stopped:
-                callback()
-
-        after_id = ctx.after(delay_ms, run)
-        id_box.append(after_id)
-        self._pending_after_ids.add(after_id)
+    def paint(self, painter: QPainter, elapsed_ms: int) -> None:
+        """Dessine l'effet ; l'opacité du fondu est déjà appliquée au painter."""
 
 
 # Registre des malus, dans l'ordre d'affichage du Dashboard (ordre des imports dans __init__).

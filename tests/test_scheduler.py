@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import random
 
-import pytest
-
 from chaos_overlay import scheduler
 
 
@@ -49,30 +47,3 @@ def test_pick_consumes_rng_like_original() -> None:
     scheduler.pick([], rng_new)
     rng_old.choice(["rien"])
     assert rng_new.random() == rng_old.random()
-
-
-@pytest.mark.parametrize(
-    ("text", "expected"),
-    [
-        ("60", 60),
-        ("1", 1),
-        ("007", 7),
-        ("3600", 3600),
-        ("0", None),
-        ("", None),
-        ("-5", None),
-        ("abc", None),
-        ("1.5", None),
-        (" 5", None),
-        ("5 ", None),
-        ("²", None),  # chiffre Unicode : l'ancien code plantait sur int("²")
-        ("٣", None),  # chiffre arabe-indien
-    ],
-)
-def test_parse_frequency(text: str, expected: int | None) -> None:
-    assert scheduler.parse_frequency(text) == expected
-
-
-def test_display_name() -> None:
-    assert scheduler.display_name("tunnel_vision") == "TUNNEL VISION"
-    assert scheduler.display_name("rien") == "RIEN"

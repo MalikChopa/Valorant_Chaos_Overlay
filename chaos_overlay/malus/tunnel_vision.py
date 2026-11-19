@@ -1,8 +1,11 @@
-"""Tunnel vision : tout est noir sauf un carré de 600 px au centre."""
+"""Tunnel vision : tout est noir sauf un carré au centre (600 px en 1080p)."""
 
 from __future__ import annotations
 
-from chaos_overlay.malus.base import EffectContext, Malus, register
+from PySide6.QtCore import QRectF
+from PySide6.QtGui import QColor, QPainter, QPainterPath
+
+from chaos_overlay.malus.base import Malus, register
 
 HALF_SIZE = 300
 
@@ -10,12 +13,15 @@ HALF_SIZE = 300
 @register
 class TunnelVision(Malus):
     key = "tunnel_vision"
+    label = "Vision tunnel"
+    description = "Tout l'écran est noir, sauf un carré au centre."
     default_duration_ms = 8000
 
-    def _draw(self, ctx: EffectContext) -> None:
-        cx, cy, r = ctx.width // 2, ctx.height // 2, HALF_SIZE
-        canvas = ctx.canvas
-        self._track(canvas.create_rectangle(0, 0, ctx.width, cy - r, fill="black", outline=""))
-        self._track(canvas.create_rectangle(0, cy + r, ctx.width, ctx.height, fill="black", outline=""))
-        self._track(canvas.create_rectangle(0, cy - r, cx - r, cy + r, fill="black", outline=""))
-        self._track(canvas.create_rectangle(cx + r, cy - r, ctx.width, cy + r, fill="black", outline=""))
+    def paint(self, painter: QPainter, elapsed_ms: int) -> None:
+        ctx = self.ctx
+        r = ctx.px(HALF_SIZE)
+        cx, cy = ctx.width // 2, ctx.height // 2
+        path = QPainterPath()
+        path.addRect(QRectF(0, 0, ctx.width, ctx.height))
+        path.addRect(QRectF(cx - r, cy - r, 2 * r, 2 * r))  # règle pair-impair : le carré devient un trou
+        painter.fillPath(path, QColor("black"))

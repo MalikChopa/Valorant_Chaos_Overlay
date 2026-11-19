@@ -47,9 +47,6 @@ class FakeUser32:
         self.refuse = refuse
         self.raise_error = raise_error
 
-    def GetParent(self, widget_id: int) -> int:  # noqa: N802 (nom Win32)
-        return widget_id + 1000
-
     def GetWindowLongW(self, hwnd: int, index: int) -> int:  # noqa: N802
         if self.raise_error:
             raise OSError("faux échec")
@@ -74,8 +71,7 @@ def install_windll(monkeypatch: pytest.MonkeyPatch, user32: Any) -> None:
 def test_click_through_success(monkeypatch: pytest.MonkeyPatch) -> None:
     user32 = FakeUser32()
     install_windll(monkeypatch, user32)
-    hwnd = win32.toplevel_hwnd(5)
-    assert hwnd == 1005
+    hwnd = 1005
     assert win32.make_click_through(hwnd) is True
     assert user32.styles[hwnd] == 0x100 | 0x00080000 | 0x00000020 | 0x08000000
 
@@ -94,4 +90,3 @@ def test_click_through_without_hwnd_or_windll(monkeypatch: pytest.MonkeyPatch) -
     assert win32.make_click_through(0) is False
     monkeypatch.delattr(ctypes, "windll", raising=False)
     assert win32.make_click_through(1005) is False
-    assert win32.toplevel_hwnd(5) == 0

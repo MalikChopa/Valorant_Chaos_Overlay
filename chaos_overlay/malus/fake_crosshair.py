@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from chaos_overlay.malus.base import EffectContext, Malus, register
+from PySide6.QtGui import QColor, QPainter
+
+from chaos_overlay.malus.base import Malus, register
 
 COLOR = "#00ff00"
 OFFSET_X = 45
@@ -14,17 +16,15 @@ THICKNESS = 8
 @register
 class FakeCrosshair(Malus):
     key = "fake_crosshair"
+    label = "Faux viseur"
+    description = "Une grande croix verte, décalée du vrai centre."
     default_duration_ms = 10000
 
-    def _draw(self, ctx: EffectContext) -> None:
-        fx = (ctx.width // 2) + OFFSET_X
-        fy = (ctx.height // 2) + OFFSET_Y
-        size, thick = ARM_LENGTH, THICKNESS
-        canvas = ctx.canvas
-        # Barre horizontale puis barre verticale
-        self._track(
-            canvas.create_rectangle(fx - size, fy - thick // 2, fx + size, fy + thick // 2, fill=COLOR, outline="")
-        )
-        self._track(
-            canvas.create_rectangle(fx - thick // 2, fy - size, fx + thick // 2, fy + size, fill=COLOR, outline="")
-        )
+    def paint(self, painter: QPainter, elapsed_ms: int) -> None:
+        ctx = self.ctx
+        fx = ctx.width // 2 + round(OFFSET_X * ctx.scale)
+        fy = ctx.height // 2 + round(OFFSET_Y * ctx.scale)
+        size, thick = ctx.px(ARM_LENGTH), ctx.px(THICKNESS)
+        color = QColor(COLOR)
+        painter.fillRect(fx - size, fy - thick // 2, 2 * size, thick, color)  # barre horizontale
+        painter.fillRect(fx - thick // 2, fy - size, thick, 2 * size, color)  # barre verticale

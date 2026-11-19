@@ -3,22 +3,35 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "valorant-chaos-overlay"
-version = "2.0.0"
-description = "Overlay passif de malus visuels aléatoires pour streamers"
+name = "chaos-overlay"
+version = "3.0.0"
+description = "Overlay passif de malus visuels aléatoires pour streamers de FPS (Valorant, CS2, Apex, Overwatch 2...)"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
+authors = [{ name = "Malik Moussaoui (Chopa)" }]
+keywords = ["overlay", "fps", "streamer", "twitch", "challenge", "pyside6"]
+classifiers = [
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Environment :: Win32 (MS Windows)",
+    "Topic :: Games/Entertainment :: First Person Shooters",
+]
 dependencies = [
-    "customtkinter==6.0.0",
+    # Essentials = QtCore, QtGui, QtWidgets seulement (pas de QtWebEngine & co) : install et exe plus légers.
+    "PySide6-Essentials==6.11.3",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest==9.2.0",
+    "pytest-qt==4.5.0",
     "mypy==2.4.1",
     "pyinstaller==6.22.3",
 ]
+
+[project.urls]
+Source = "https://github.com/MalikChopa/Valorant_Chaos_Overlay"
 
 [project.gui-scripts]
 chaos-overlay = "chaos_overlay.app:main"
@@ -29,11 +42,8 @@ include = ["chaos_overlay*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-p no:cacheprovider"
+qt_api = "pyside6"
 
 [tool.mypy]
 strict = true
 files = ["chaos_overlay"]
-
-[[tool.mypy.overrides]]
-module = ["customtkinter", "customtkinter.*"]
-ignore_missing_imports = true

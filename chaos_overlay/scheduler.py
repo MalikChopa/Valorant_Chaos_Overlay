@@ -1,4 +1,4 @@
-"""Logique pure du tirage et de la roulette (aucun import tkinter)."""
+"""Logique pure du tirage et de la roulette (aucun import Qt)."""
 
 from __future__ import annotations
 
@@ -36,18 +36,3 @@ def roulette_delays(spins: int = ROULETTE_SPINS, start_delay: int = ROULETTE_STA
         delay = delay + int(120 / spins_left)
         delays.append(delay)
     return delays
-
-
-def parse_frequency(text: str) -> int | None:
-    """Fréquence saisie (secondes) : entier >= 1 en chiffres ASCII, sinon None."""
-    if not (text.isascii() and text.isdigit()):
-        return None
-    value = int(text)
-    if value < 1:
-        return None
-    return value
-
-
-def display_name(key: str) -> str:
-    """Nom affiché d'un malus : "tunnel_vision" -> "TUNNEL VISION"."""
-    return key.replace("_", " ").upper()

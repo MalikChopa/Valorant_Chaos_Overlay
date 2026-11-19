@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests (Windows, Python ${{ matrix.python }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.13"]
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - name: Installer
+        run: python -m pip install -e .[dev]
+      - name: Types (mypy strict)
+        run: python -m mypy
+      - name: Tests
+        run: python -m pytest -q
+
+  build:
+    name: Exe Windows (PyInstaller)
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Installer
+        run: python -m pip install -e .[dev]
+      - name: Construire l'exe
+        run: python -m PyInstaller --noconfirm chaos_overlay.spec
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chaos_overlay-exe
+          path: dist/chaos_overlay.exe
+          retention-days: 14
