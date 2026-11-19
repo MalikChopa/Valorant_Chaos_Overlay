@@ -109,3 +109,7 @@ flowchart TD
 ## Licence
 
 MIT (voir `LICENSE`), à l'exception de `mlg.gif`.
+
+---
+
+Créé par **Malik Moussaoui** (Chopa), développeur à Toulouse · [tous mes projets](https://malikchopa.github.io/) · [GitHub](https://github.com/MalikChopa)
